@@ -12,7 +12,7 @@
 
 typedef struct {
 {%- for field in message.fields %}
-    {{ lang.get_lang_type(field.type) }} {{ field.name }};
+    {{ lang.convert_type(field.type) }} {{ field.name }};
 {%- endfor %}
 } {{ message.name }};
 
