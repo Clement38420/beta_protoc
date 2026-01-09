@@ -1,0 +1,6 @@
+[project]
+name = "beta_protoc_compiler"
+version = "0.0.1"
+dependencies = [
+    "jinja2",
+]

@@ -1,0 +1,26 @@
+{
+  "messages": [
+    {
+      "name": "Vitesse",
+      "fields": [
+        {
+          "type": "Hello",
+          "name": "vitesse"
+        }
+      ]
+    },
+    {
+      "name": "Hello",
+      "fields": [
+        {
+          "type": "uint32",
+          "name": "sender"
+        },
+        {
+          "type": "string",
+          "name": "message"
+        }
+      ]
+    }
+  ]
+}

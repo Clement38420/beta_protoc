@@ -1,0 +1,19 @@
+#ifndef {{ message.name|upper }}_MSG_H
+#define {{ message.name|upper }}_MSG_H
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#include "beta_com.h"
+
+{%- for dep in message.dependencies %}
+#include "{{ dep }}.h"
+{%- endfor %}
+
+typedef struct {
+{%- for field in message.fields %}
+    {{ lang.get_lang_type(field.type) }} {{ field.name }};
+{%- endfor %}
+} {{ message.name }};
+
+#endif
