@@ -1,7 +1,7 @@
 import pathlib
 from jinja2 import Environment, FileSystemLoader
 
-from compiler.compiler import Language
+from .language import Language
 from compiler.protoc_schema.schema import ProtocSchema
 
 class Generator:

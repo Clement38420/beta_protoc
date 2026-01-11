@@ -1,7 +1,7 @@
 from typing import Dict, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from compiler.compiler.language import Language
+    from compiler.core.language import Language
 
 class MissingTypeError(Exception):
     """Raised when a type is missing in a language's type mapping."""

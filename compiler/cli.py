@@ -3,18 +3,18 @@ import pathlib
 import shutil
 import sys
 
-from .compiler.language import Language, SUPPORTED_LANGUAGES
-from .compiler.generator import Generator
+from .core.language import Language, SUPPORTED_LANGUAGES
+from .core.generator import Generator
 from .common import loc_to_path, JSONParsingErrors, MissingTypeError
 from compiler import TEMPLATE_DIR
 
 def main():
-    """The main entry point of the beta_protoc compiler.
+    """The main entry point of the beta_protoc core.
 
     This function parses command-line arguments, validates the input file, creates the output
     directory, and then invokes the `Compiler` to generate the code.
     """
-    arg_parser = argparse.ArgumentParser(prog="beta_proc compiler",
+    arg_parser = argparse.ArgumentParser(prog="beta_proc core",
                                          description=f"This program uses JSON files to generate {Language.get_supported_languages_string(SUPPORTED_LANGUAGES)} codes which are made to be used in serial communication along with the beta_com library.")
     arg_parser.add_argument("filepath", help="The path to the JSON file to be compiled.")
     arg_parser.add_argument("-o", "--out", default="./generated", help="The output directory for the generated files.")
