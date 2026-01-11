@@ -18,6 +18,7 @@ def main():
                                          description=f"This program uses JSON files to generate {Language.get_supported_languages_string(SUPPORTED_LANGUAGES)} codes which are made to be used in serial communication along with the beta_com library.")
     arg_parser.add_argument("filepath", help="The path to the JSON file to be compiled.")
     arg_parser.add_argument("-o", "--out", default="./generated", help="The output directory for the generated files.")
+    arg_parser.add_argument("--clean", action="store_true", help="Delete the output directory before regenerating code.")
     args = arg_parser.parse_args()
 
     protoc_file_path = pathlib.Path(args.filepath).resolve().absolute()
@@ -26,7 +27,7 @@ def main():
         sys.exit("Error: The specified JSON file does not exist.")
 
     out_dir = pathlib.Path(args.out).resolve().absolute()
-    if out_dir.exists():
+    if out_dir.exists() and args.clean:
         shutil.rmtree(out_dir)
 
     out_dir.mkdir(parents=True, exist_ok=True)
