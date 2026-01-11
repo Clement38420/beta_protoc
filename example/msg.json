@@ -13,7 +13,7 @@
       "name": "Hello",
       "fields": [
         {
-          "type": "uint64",
+          "type": "uint8",
           "name": "dzdz"
         },
         {
