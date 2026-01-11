@@ -1,6 +1,7 @@
 import json
 import argparse
 import pathlib
+import shutil
 from enum import Enum
 from typing import List, Dict, ClassVar, Optional
 import sys
@@ -369,6 +370,9 @@ def main():
         sys.exit("Error: The specified JSON file does not exist.")
 
     out_dir = pathlib.Path(args.out).resolve().absolute()
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+
     out_dir.mkdir(parents=True, exist_ok=True)
 
     compiler = Compiler(TEMPLATE_DIR)
