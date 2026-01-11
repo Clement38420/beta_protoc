@@ -13,8 +13,8 @@
       "name": "Hello",
       "fields": [
         {
-          "type": "uint32",
-          "name": "sender"
+          "type": "uint64",
+          "name": "dzdz"
         },
         {
           "type": "string",
