@@ -5,3 +5,6 @@ dependencies = [
     "jinja2",
     "pydantic",
 ]
+
+[project.scripts]
+beta_protoc_compiler = "compiler.cli:main"
