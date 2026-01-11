@@ -1,5 +1,7 @@
 import pathlib
 from jinja2 import Environment, FileSystemLoader
+
+from compiler.compiler import Language
 from compiler.protoc_schema.schema import ProtocSchema
 
 class Generator:
@@ -8,8 +10,9 @@ class Generator:
     Attributes:
         env: The Jinja2 environment used for template rendering.
     """
-    def __init__(self, template_dir: pathlib.Path):
+    def __init__(self, template_dir: pathlib.Path, languages: list[Language]):
         self.env = Environment(loader=FileSystemLoader(template_dir))
+        self.languages = languages
 
     def generate(self, in_file: pathlib.Path, out_dir: pathlib.Path):
         """Generates code from a JSON message definition file.
@@ -21,12 +24,10 @@ class Generator:
             in_file: The path to the input JSON file.
             out_dir: The path to the output directory where the generated files will be saved.
         """
-        from compiler.compiler.language import SUPPORTED_LANGUAGES
-
         schema = ProtocSchema.from_json_file(in_file)
         messages = schema.messages
 
-        for lang in SUPPORTED_LANGUAGES:
+        for lang in self.languages:
             src_template = self.env.get_template(f"{lang.name}/message.{lang.src_ext}.j2")
 
             header_template = None

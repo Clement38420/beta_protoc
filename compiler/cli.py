@@ -31,7 +31,7 @@ def main():
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    compiler = Generator(TEMPLATE_DIR)
+    compiler = Generator(TEMPLATE_DIR, SUPPORTED_LANGUAGES)
 
     try:
         compiler.generate(protoc_file_path, out_dir)
