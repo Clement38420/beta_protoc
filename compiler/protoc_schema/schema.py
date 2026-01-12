@@ -2,7 +2,7 @@ from pydantic import ValidationError, BaseModel
 from pydantic_core import ErrorDetails
 from typing import List, Dict
 from .message import Message
-from compiler.common.errors import JSONParsingErrors, InvalidTypeError, JSONParsingErrorDetails
+from compiler.common.errors import JSONParsingErrors, JSONParsingErrorDetails
 import pathlib
 import json
 
@@ -90,7 +90,7 @@ class ProtocSchema(BaseModel):
         for id in messages_id:
             if len(messages_id[id]) > 1:
                 errors_to_raise.append(JSONParsingErrorDetails(
-                    message=f"\"{'\", \"'.join(messages_id[id])}\" have the same id.",
+                    message="\"" + '", "'.join(messages_id[id]) + "  have the same id.",
                     loc=("messages",)
                 ))
 
@@ -102,7 +102,7 @@ class ProtocSchema(BaseModel):
             for id in fields_id:
                 if len(fields_id[id]) > 1:
                     errors_to_raise.append(JSONParsingErrorDetails(
-                        message=f"\"{'\", \"'.join(fields_id[id])}\" have the same id.",
+                        message="\"" + '", "'.join(fields_id[id]) + " have the same id.",
                         loc=("messages", msg_index, "fields")
                     ))
 
