@@ -207,6 +207,16 @@ The `PAYLOAD` itself is a sequence of fields, each encoded as follows:
 | `PROP_LEN`   | The length of the field's value.        | 1 byte           |
 | `PROP_VALUE` | The field's value.                      | `PROP_LEN` bytes |
 
+### Project Integration
+
+The generated C code has external dependencies that must be included in your project's build system (e.g., `CMakeLists.txt`) to compile correctly.
+
+1.  **`beta_protoc` Common code:**
+    The core serialization helpers are located in the `protoc_common_code/C/` directory of this repository. You must add `beta_protoc.c` and `beta_protoc.h` to your project.
+
+2.  **`beta_com` Library:**
+    The generated code relies on a communication library (by default, `beta_com`) for protocol-level tasks like CRC calculation and COBS encoding. You must ensure this library is also included in your project.
+
 ### Generated Functions
 
 For each message, the following functions are generated to facilitate serialization:
