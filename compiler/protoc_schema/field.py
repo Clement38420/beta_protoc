@@ -17,14 +17,9 @@ class Field(BaseModel):
 
 
     def normalize_type(self):
-        """Checks if the field's type is valid.
+        """Normalize the type of the field.
 
-        A type is considered valid if it is either a primitive `DataType` or a
-        previously defined message type present in the `Message.registry`.
-        If the type is not a primitive, `is_primitive` is set to False.
-
-        Raises:
-            InvalidTypeError: If the type is neither a primitive nor a defined message.
+        If the field is a correct 'DataType' enum, the field type is converted, else it is left unchanged, and it represents a custom message type.
         """
         try:
             self.type = DataType(self.type)
