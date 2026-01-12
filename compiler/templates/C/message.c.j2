@@ -1,1 +1,96 @@
-test
+#include "{{ message.name }}.h"
+
+int get_{{ lang.camel_to_proper_case(message.name) }}_size({{ message.name }} data, size_t *size) {
+    *size = 0;
+{%- for field in message.fields %}
+    {
+        size_t field_size = 0;
+        field_size = sizeof(uint8_t); // Field ID
+        field_size += sizeof(uint8_t); // Length byte
+        {% if field.type == "string" %}
+        field_size += strlen(data.{{ field.name }}); // Actual string data
+        {% elif field.is_primitive == false %}
+        size_t nested_size = 0;
+        int get_size_result = get_{{ lang.camel_to_proper_case(field.type) }}_size(data.{{ field.name }}, &nested_size); // Nested message size
+        if (get_size_result != 0) return get_size_result;
+        field_size += nested_size;
+        {% else %}
+        field_size += sizeof({{ lang.convert_type(field.type) }}); // Actual data
+        {% endif %}
+        *size += field_size;
+    }
+{%- endfor %}
+
+    return 0;
+}
+
+int {{ lang.camel_to_proper_case(message.name) }}_to_buff({{ message.name }} data, uint8_t **buff, size_t *buff_len) {
+{%- for field in message.fields %}
+    {
+        if (*buff_len < 2) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
+
+        **buff = (uint8_t){{ field.id }}; // Field ID
+        (*buff)++;
+        {% if field.type == "string" %}
+        **buff = (uint8_t)strlen(data.{{ field.name }}); // Length byte
+        (*buff)++;
+        *buff_len -= 2;
+
+        int result = {{ lang.camel_to_proper_case(field.type) }}_to_buff(data.{{ field.name }}, strlen(data.{{ field.name }}), buff, buff_len);
+        {% elif field.is_primitive == false %}
+        size_t nested_size = 0;
+        int get_size_result = get_{{ lang.camel_to_proper_case(field.type) }}_size(data.{{ field.name }}, &nested_size);
+        if (get_size_result != 0) return get_size_result;
+        **buff = (uint8_t)nested_size; // Length byte
+        (*buff)++;
+        *buff_len -= 2;
+
+        int result = {{ lang.camel_to_proper_case(field.type) }}_to_buff(data.{{ field.name }}, buff, buff_len);
+        {% else %}
+        **buff = (uint8_t)sizeof({{ lang.convert_type(field.type) }}); // Length byte
+        (*buff)++;
+        *buff_len -= 2;
+
+        int result = {{ lang.camel_to_proper_case(field.type) }}_to_buff(data.{{ field.name }}, buff, buff_len);
+        {% endif %}
+        if (result != 0) return result;
+    }
+{%- endfor %}
+
+    return 0;
+}
+
+int {{ lang.camel_to_proper_case(message.name) }}_to_message({{ message.name }} data, uint8_t **buff, size_t *buff_len) {
+    uint8_t message_buff[230];
+    uint8_t *p_message_buff = message_buff;
+    size_t message_len = sizeof(message_buff);
+
+    if (message_len < MESSAGE_HEADER_SIZE) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
+    *p_message_buff = (uint8_t)PROTOCOL_VERSION; // Protocol version
+    p_message_buff++;
+    *p_message_buff = (uint8_t){{ message.id }}; // Message ID
+    p_message_buff++;
+    uint8_t *p_payload_len = p_message_buff; // Pointer to message length byte
+    *p_message_buff = 0;
+    p_message_buff++;
+    message_len -= MESSAGE_HEADER_SIZE;
+
+    size_t initial_message_len = message_len;
+
+    int payload_result = {{ lang.camel_to_proper_case(message.name) }}_to_buff(data, &p_message_buff, &message_len);
+    if (payload_result != 0) return payload_result;
+
+    size_t payload_len = initial_message_len - message_len;
+    *p_payload_len = (uint8_t)payload_len;
+
+    uint8_t work_buff[256];
+    size_t work_len = sizeof(work_buff);
+    size_t encoded_size = *buff_len;
+    int result = generate_encoded_message(message_buff, payload_len + MESSAGE_HEADER_SIZE, *buff, &encoded_size, work_buff, work_len);
+    if (result != 0) return result;
+
+    *buff += encoded_size;
+    *buff_len -= encoded_size;
+
+    return 0;
+}
