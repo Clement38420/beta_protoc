@@ -85,7 +85,7 @@ You can use the following primitive types or the name of another message defined
 
 ### Key Considerations
 
-1. **Naming Conventions:** Message and field names must start with a letter and can only contain letters, digits, or underscores (`_`).
+1. **Naming Conventions:** Message and field names must start with a letter and can only contain letters, digits, or underscores (`_`). In addition, CamelCase is advised to get the right conversion for all languages.
 2. **Unique IDs:** Message IDs must be unique across all messages. Field IDs must be unique within a single message.
 3. **Dependencies:** If message `A` is used as a field type inside message `B`, message `A` must be defined within the `messages` list. The compiler will automatically generate the required dependencies (e.g., `#include "A.h"`).
 4. **Order:** The order in which messages are defined in the JSON file does not matter; the compiler resolves dependencies automatically.
@@ -102,14 +102,20 @@ The architecture is modular. To add support for a new language (e.g., Python, C+
 
 ### 1. Define the Language
 
-Open `compiler/core/language.py` and add an entry to the `SUPPORTED_LANGUAGES` list. You must provide the mapping between internal types (`DataType`) and the target language types.
+Open `compiler/core/language.py` and add an entry to the `SUPPORTED_LANGUAGES` list. You must provide:
+- The mapping between internal types (`DataType`) and the target language types.
+- The naming convention (`case`) to use for generating names (e.g., function names like `read_<message_name>`).
 
 ```python
 # Example for Python
+from compiler.core.language import Language, Case
+from compiler.common.data_types import DataType
+
 Language(
     name="Python",
+    case=Case.SNAKE,  # Use snake_case for names (e.g., my_function)
     src_ext="py",
-    header_ext=None, # Python does not use header files
+    header_ext=None,  # Python does not use header files
     types_mapping={
         DataType.UINT8: "int",
         DataType.STRING: "str",
