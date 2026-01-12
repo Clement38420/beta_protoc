@@ -169,3 +169,99 @@ beta_protoc_compiler msg.json
 **Output (C):**
 
 The compiler will generate `Position.h`, `Position.c`, `RobotStatus.h` (which includes `Position.h`), and `RobotStatus.c`.
+
+## Using the Generated Code (C Example)
+
+Once you have generated the code from your JSON schema, you can use it to create and serialize messages. The generated code relies on an underlying communication library (`beta_com`) for low-level protocol handling.
+
+### Generated File Structure
+
+For each message (e.g., `MyMessage`), the following files are created:
+
+*   `MyMessage.h`: The header file defining the data structure and function prototypes.
+*   `MyMessage.c`: The implementation of the serialization functions.
+
+### Binary Message Format
+
+The goal is to convert a C struct into a binary message ready to be sent over a serial port or another communication channel. The final format is as follows (all integers are **little-endian**):
+
+```
+[COBS_POINTER [FRAME] 0x00]
+```
+
+Where `FRAME` consists of:
+
+| Field              | Description                                                                                              | Size                |
+|--------------------|----------------------------------------------------------------------------------------------------------|---------------------|
+| `PROTOCOL_VERSION` | The version of the communication protocol.                                                               | 1 byte              |
+| `MESSAGE_ID`       | The unique identifier of the message (defined in JSON).                                                  | 1 byte              |
+| `MESSAGE_LEN`      | The length of the *payload* (all serialized fields).                                                     | 1 byte              |
+| `PAYLOAD`          | The message data.                                                                                        | `MESSAGE_LEN` bytes |
+| `CRC16`            | A CRC16 Modbus (see `beta_com`) calculated over the entire frame (from `PROTOCOL_VERSION` to `PAYLOAD`). | 2 bytes             |
+
+The `PAYLOAD` itself is a sequence of fields, each encoded as follows:
+
+| Field        | Description                             | Size             |
+|--------------|-----------------------------------------|------------------|
+| `PROP_ID`    | The field identifier (defined in JSON). | 1 byte           |
+| `PROP_LEN`   | The length of the field's value.        | 1 byte           |
+| `PROP_VALUE` | The field's value.                      | `PROP_LEN` bytes |
+
+### Generated Functions
+
+For each message, the following functions are generated to facilitate serialization:
+
+1.  **`struct <MessageName>`**
+    The C struct representing your message. **You must first populate this struct with the data you want to send.**
+
+    ```c
+    // Example for a "Position" message
+    Position my_pos;
+    my_pos.x = 12.34;
+    my_pos.y = -56.78;
+    ```
+
+2.  **`int get_<MessageName>_size(<MessageName> data, size_t *size)`**
+    Calculates the total size in bytes that the message *payload* will occupy once serialized.
+
+3.  **`int <MessageName>_to_buff(<MessageName> data, uint8_t **buff, size_t *buff_len)`**
+    Serializes only the *payload* (the fields) of the struct into a provided buffer. This function is mainly used internally by `<MessageName>_to_message`.
+
+4.  **`int <MessageName>_to_message(<MessageName> data, uint8_t **buff, size_t *buff_len)`**
+    This is the main function to use. It takes the populated struct, fully serializes it (header + payload), calculates the CRC, and applies COBS encoding. The result is a complete binary message, ready to be sent.
+
+### Complete Example
+
+```c
+#include "Position.h"
+#include <stdio.h>
+
+int main() {
+    // 1. Populate the message struct
+    Position my_pos;
+    my_pos.x = 10.5f;
+    my_pos.y = -2.3f;
+
+    // 2. Prepare a buffer to receive the encoded message
+    uint8_t output_buffer[256];
+    uint8_t *p_buffer = output_buffer;
+    size_t buffer_len = sizeof(output_buffer);
+
+    // 3. Serialize and encode the message
+    int result = Position_to_message(my_pos, &p_buffer, &buffer_len);
+
+    if (result == 0) {
+        size_t message_size = sizeof(output_buffer) - buffer_len;
+        printf("Message encoded successfully (%zu bytes)!\n", message_size);
+
+        // The 'output_buffer' now contains the complete binary message
+        // ready to be sent via UART, TCP, etc.
+        // send_binary_data(output_buffer, message_size);
+    } else {
+        fprintf(stderr, "Error encoding message: %d\n", result);
+    }
+
+    return 0;
+}
+```
+
