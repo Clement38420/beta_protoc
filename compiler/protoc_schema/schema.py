@@ -79,23 +79,43 @@ class ProtocSchema(BaseModel):
         Raises:
             JSONParsingErrors: If an invalid type is found in any field.
         """
-        messages_name = {msg.name for msg in self.messages}
-
         errors_to_raise = []
 
-        # Test the uniqueness of the messages id
+        # Tests the uniqueness of the messages name
+        messages_name = {}
+        [messages_name.setdefault(msg.name, []).append(str(msg.id)) for msg in self.messages]
+
+        for name in messages_name:
+            if len(messages_name[name]) > 1:
+                errors_to_raise.append(JSONParsingErrorDetails(
+                    message="IDs: \"" + '", "'.join(messages_name[name]) + "\" have the same name.",
+                    loc=("messages",)
+                ))
+
+        # Tests the uniqueness of the messages id
         messages_id = {}
         [messages_id.setdefault(msg.id, []).append(msg.name) for msg in self.messages]
 
         for id in messages_id:
             if len(messages_id[id]) > 1:
                 errors_to_raise.append(JSONParsingErrorDetails(
-                    message="\"" + '", "'.join(messages_id[id]) + "  have the same id.",
+                    message="\"" + '", "'.join(messages_id[id]) + "\" have the same id.",
                     loc=("messages",)
                 ))
 
         for msg_index, message in enumerate(self.messages):
-            # Test the uniqueness of the fields id
+            # Tests the uniqueness of the fields name
+            fields_name = {}
+            [fields_name.setdefault(f.name, []).append(str(f.id)) for f in message.fields]
+
+            for name in fields_name:
+                if len(fields_name[name]) > 1:
+                    errors_to_raise.append(JSONParsingErrorDetails(
+                        message="IDs: \"" + '", "'.join(fields_name[name]) + "\" have the same name.",
+                        loc=("messages", msg_index, "fields")
+                    ))
+
+            # Tests the uniqueness of the fields id
             fields_id = {}
             [fields_id.setdefault(f.id, []).append(f.name) for f in message.fields]
 
@@ -106,7 +126,7 @@ class ProtocSchema(BaseModel):
                         loc=("messages", msg_index, "fields")
                     ))
 
-            # Test the validity of the fields type
+            # Tests the validity of the fields type
             for field_index, f in enumerate(message.fields):
                     f.normalize_type()
                     if not f.is_primitive:
