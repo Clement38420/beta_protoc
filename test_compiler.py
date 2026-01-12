@@ -18,9 +18,10 @@ def valid_json_file(tmp_path):
         "messages": [
             {
                 "name": "SensorData",
+                "id": 1,
                 "fields": [
-                    {"name": "id", "type": "uint8"},
-                    {"name": "value", "type": "float32"}
+                    {"name": "id", "id": 1, "type": "uint8"},
+                    {"name": "value", "id": 2, "type": "float32"}
                 ]
             }
         ]
@@ -38,8 +39,9 @@ def invalid_type_json_file(tmp_path):
         "messages": [
             {
                 "name": "BadMsg",
+                "id": 1,
                 "fields": [
-                    {"name": "field1", "type": "int128"} # int128 is not supported
+                    {"name": "field1", "id": 1, "type": "int128"} # int128 is not supported
                 ]
             }
         ]
@@ -123,8 +125,9 @@ def test_missing_dependency_validation(tmp_path):
         "messages": [
             {
                 "name": "Parent",
+                "id": 1,
                 "fields": [
-                    {"name": "child", "type": "UnknownType"} # UnknownType is neither primitive nor defined
+                    {"name": "child", "id": 1, "type": "UnknownType"} # UnknownType is neither primitive nor defined
                 ]
             }
         ]
@@ -136,3 +139,49 @@ def test_missing_dependency_validation(tmp_path):
         ProtocSchema.from_json_file(f)
 
     assert "UnknownType is not a valid type" in excinfo.value.errors[0].message
+
+def test_duplicate_message_id(tmp_path):
+    """
+    Test that duplicate message IDs are detected and reported.
+    """
+    content = {
+        "messages": [
+            {"name": "MessageA", "id": 1, "fields": []},
+            {"name": "MessageB", "id": 1, "fields": []}
+        ]
+    }
+    f = tmp_path / "duplicate_msg_id.json"
+    f.write_text(json.dumps(content))
+
+    with pytest.raises(JSONParsingErrors) as excinfo:
+        ProtocSchema.from_json_file(f)
+
+    error = excinfo.value.errors[0]
+    assert '"MessageA", "MessageB" have the same id.' in error.message
+    assert error.loc == ('messages',)
+
+def test_duplicate_field_id(tmp_path):
+    """
+    Test that duplicate field IDs within a single message are detected.
+    """
+    content = {
+        "messages": [
+            {
+                "name": "MessageWithDupFields",
+                "id": 1,
+                "fields": [
+                    {"name": "field_a", "id": 1, "type": "uint8"},
+                    {"name": "field_b", "id": 1, "type": "uint16"}
+                ]
+            }
+        ]
+    }
+    f = tmp_path / "duplicate_field_id.json"
+    f.write_text(json.dumps(content))
+
+    with pytest.raises(JSONParsingErrors) as excinfo:
+        ProtocSchema.from_json_file(f)
+
+    error = excinfo.value.errors[0]
+    assert '"field_a", "field_b" have the same id.' in error.message
+    assert error.loc == ('messages', 0, 'fields')

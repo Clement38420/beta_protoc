@@ -59,9 +59,11 @@ The input file must follow a specific JSON structure defining a list of messages
   "messages": [
     {
       "name": "MessageName",
+      "id": 1,
       "fields": [
         {
           "name": "field_name",
+          "id": 1,
           "type": "FieldType"
         }
       ]
@@ -84,8 +86,9 @@ You can use the following primitive types or the name of another message defined
 ### Key Considerations
 
 1. **Naming Conventions:** Message and field names must start with a letter and can only contain letters, digits, or underscores (`_`).
-2. **Dependencies:** If message `A` is used as a field type inside message `B`, message `A` must be defined within the `messages` list. The compiler will automatically generate the required dependencies (e.g., `#include "A.h"`).
-3. **Order:** The order in which messages are defined in the JSON file does not matter; the compiler resolves dependencies automatically.
+2. **Unique IDs:** Message IDs must be unique across all messages. Field IDs must be unique within a single message.
+3. **Dependencies:** If message `A` is used as a field type inside message `B`, message `A` must be defined within the `messages` list. The compiler will automatically generate the required dependencies (e.g., `#include "A.h"`).
+4. **Order:** The order in which messages are defined in the JSON file does not matter; the compiler resolves dependencies automatically.
 
 ## Supported Languages
 
@@ -133,20 +136,28 @@ The compiler will automatically locate and use these templates during generation
   "messages": [
     {
       "name": "Position",
+      "id": 1,
       "fields": [
-        { "type": "float32", "name": "x" },
-        { "type": "float32", "name": "y" }
+        { "name": "x", "id": 1, "type": "float32" },
+        { "name": "y", "id": 2, "type": "float32" }
       ]
     },
     {
       "name": "RobotStatus",
+      "id": 2,
       "fields": [
-        { "type": "uint8", "name": "id" },
-        { "type": "Position", "name": "pos" } 
+        { "name": "id", "id": 1, "type": "uint8" },
+        { "name": "pos", "id": 2, "type": "Position" }
       ]
     }
   ]
 }
+```
+
+**Command:**
+
+```bash
+beta_protoc_compiler msg.json
 ```
 
 **Output (C):**

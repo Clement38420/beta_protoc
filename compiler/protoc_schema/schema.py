@@ -83,7 +83,30 @@ class ProtocSchema(BaseModel):
 
         errors_to_raise = []
 
+        # Test the uniqueness of the messages id
+        messages_id = {}
+        [messages_id.setdefault(msg.id, []).append(msg.name) for msg in self.messages]
+
+        for id in messages_id:
+            if len(messages_id[id]) > 1:
+                errors_to_raise.append(JSONParsingErrorDetails(
+                    message=f"\"{'\", \"'.join(messages_id[id])}\" have the same id.",
+                    loc=("messages",)
+                ))
+
         for msg_index, message in enumerate(self.messages):
+            # Test the uniqueness of the fields id
+            fields_id = {}
+            [fields_id.setdefault(f.id, []).append(f.name) for f in message.fields]
+
+            for id in fields_id:
+                if len(fields_id[id]) > 1:
+                    errors_to_raise.append(JSONParsingErrorDetails(
+                        message=f"\"{'\", \"'.join(fields_id[id])}\" have the same id.",
+                        loc=("messages", msg_index, "fields")
+                    ))
+
+            # Test the validity of the fields type
             for field_index, f in enumerate(message.fields):
                     f.normalize_type()
                     if not f.is_primitive:

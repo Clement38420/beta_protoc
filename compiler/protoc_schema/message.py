@@ -8,10 +8,12 @@ class Message(BaseModel):
 
     Attributes:
         name: The name of the message.
+        id: The unique identifier of the message.
         fields: A list of `Field` objects representing the fields of the message.
         dependencies: A list of other message types that this message depends on.
     """
     name: Annotated[str, AfterValidator(is_valid_name)] = PydanticField(min_length=1)
+    id: int = PydanticField(gt=-1)
     fields: List[Field]
     dependencies: List[str] = PydanticField(default_factory=list)
 
