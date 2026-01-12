@@ -31,14 +31,14 @@ class Language(BaseModel):
     header_ext: Annotated[str, AfterValidator(is_valid_extension)] | None = None
     types_mapping: Dict[DataType, str] = PydanticField(default_factory=dict)
 
-    def convert_type(self, type_: DataType | str) -> str:
-        if isinstance(type_, DataType):
-            converted_type = self.types_mapping.get(type_)
+    def convert_type(self, type_: str) -> str:
+        try:
+            converted_type = self.types_mapping.get(DataType(type_))
             if converted_type is not None:
                 return converted_type
             else:
                 raise MissingTypeError(type_, self)
-        else:
+        except ValueError:
             return type_
 
     def camel_to_proper_case(self, string: str) -> str:

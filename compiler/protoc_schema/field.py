@@ -9,12 +9,12 @@ class Field(BaseModel):
     Attributes:
         name: The name of the field.
         id: The unique (in the message scope) identifier of the field.
-        type: The data type of the field. Can be a `DataType` enum or a string representing a custom message type.
+        type: The data type of the field. Representing a string from a 'DataType' member or custom message type.
         is_primitive: A boolean indicating whether the field's type is a primitive data type.
     """
     name: Annotated[str, AfterValidator(is_valid_name)] = PydanticField(min_length=1)
     id: int = PydanticField(gt=-1)
-    type: DataType | str = PydanticField(min_length=1)
+    type: str = PydanticField(min_length=1)
     is_primitive: bool = True
 
 
@@ -24,6 +24,6 @@ class Field(BaseModel):
         If the field is a correct 'DataType' enum, the field type is converted, else it is left unchanged, and it represents a custom message type.
         """
         try:
-            self.type = DataType(self.type)
+            self.type = DataType(self.type).value
         except ValueError:
             self.is_primitive = False
