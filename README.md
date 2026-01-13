@@ -1,6 +1,6 @@
 # Beta Protoc Compiler
 
-**Beta Protoc Compiler** is a command-line interface (CLI) tool designed to generate serialization code and data structures from JSON message definitions. It is specifically built to facilitate serial communication.
+**Beta Protoc Compiler** is a command-line interface (CLI) tool designed to generate serialization code and data structures from JSON message definitions. It is specifically built to facilitate serial communication along with the `beta_com` library for framing.
 
 ## Features
 
