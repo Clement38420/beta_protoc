@@ -22,5 +22,7 @@ typedef struct {
 int get_{{ lang.camel_to_proper_case(message.name) }}_size({{ message.name }} data, size_t *size);
 int {{ lang.camel_to_proper_case(message.name) }}_to_buff({{ message.name }} data, uint8_t **buff, size_t *buff_len);
 int {{ lang.camel_to_proper_case(message.name) }}_to_message({{ message.name }} data, uint8_t **buff, size_t *buff_len);
+int {{ lang.camel_to_proper_case(message.name) }}_to_buff({{ message.name }} data, uint8_t **buff, size_t *rem_buff);
+int {{ lang.camel_to_proper_case(message.name) }}_to_message({{ message.name }} data, uint8_t **buff, size_t *rem_buff);
 
 #endif
