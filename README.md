@@ -220,6 +220,12 @@ The `PAYLOAD` consists of a sequence of fields, where each field is encoded as f
 | `FIELD_LEN`  | The length of the `FIELD_VALUE` in bytes.    | 1 byte           |
 | `FIELD_VALUE`| The binary value of the field.               | `FIELD_LEN` bytes|
 
+### Size Limitations
+
+Currently, both the total message payload and individual fields have a size limit of 255 bytes. This is because the `MESSAGE_LEN` and `FIELD_LEN` headers are each encoded on a single byte.
+
+This limitation is expected to be removed in a future version with the implementation of variable-length integers (varints), which will allow for much larger message and field sizes.
+
 ### From Binary to Struct
 
 The deserialization process, handled by the `_from_message` functions, performs the reverse operation:
