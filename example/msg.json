@@ -1,29 +1,39 @@
 {
   "messages": [
     {
-      "name": "Vitesse2",
-      "id": 1,
+      "name": "SensorData",
+      "id": 0,
       "fields": [
         {
-          "name": "vitesse",
+          "name": "id",
+          "id": 0,
+          "type": "uint32"
+        },
+        {
+          "name": "name",
           "id": 1,
-          "type": "Hello"
+          "type": "string[32]"
+        },
+        {
+          "name": "value",
+          "id": 2,
+          "type": "Value"
         }
       ]
     },
     {
-      "name": "Hello",
-      "id": 2,
+      "name": "Value",
+      "id": 1,
       "fields": [
         {
-          "name": "dzdz",
+          "name": "value",
           "id": 0,
-          "type": "uint8"
+          "type": "uint32"
         },
         {
-          "name": "message",
+          "name": "unit",
           "id": 1,
-          "type": "string"
+          "type": "string[32]"
         }
       ]
     }
