@@ -172,57 +172,55 @@ The compiler will generate `Position.h`, `Position.c`, `RobotStatus.h` (which in
 
 ## Using the Generated Code (C Example)
 
-Once you have generated the code from your JSON schema, you can use it to create and serialize messages. The generated code relies on an underlying communication library (`beta_com`) for low-level protocol handling.
+Once you have generated the code from your JSON schema, you can use it to create, serialize, and deserialize messages.
 
 ### Generated File Structure
 
 For each message (e.g., `MyMessage`), the following files are created:
 
 *   `MyMessage.h`: The header file defining the data structure and function prototypes.
-*   `MyMessage.c`: The implementation of the serialization functions.
-
-### Binary Message Format
-
-The goal is to convert a C struct into a binary message ready to be sent over a serial port or another communication channel. The final format is as follows (all integers are **little-endian**):
-
-```
-[COBS_POINTER [FRAME] 0x00]
-```
-
-Where `FRAME` consists of:
-
-| Field              | Description                                                                                              | Size                |
-|--------------------|----------------------------------------------------------------------------------------------------------|---------------------|
-| `PROTOCOL_VERSION` | The version of the communication protocol.                                                               | 1 byte              |
-| `MESSAGE_ID`       | The unique identifier of the message (defined in JSON).                                                  | 1 byte              |
-| `MESSAGE_LEN`      | The length of the *payload* (all serialized fields).                                                     | 1 byte              |
-| `PAYLOAD`          | The message data.                                                                                        | `MESSAGE_LEN` bytes |
-| `CRC16`            | A CRC16 Modbus (see `beta_com`) calculated over the entire frame (from `PROTOCOL_VERSION` to `PAYLOAD`). | 2 bytes             |
-
-The `PAYLOAD` itself is a sequence of fields, each encoded as follows:
-
-| Field        | Description                             | Size             |
-|--------------|-----------------------------------------|------------------|
-| `PROP_ID`    | The field identifier (defined in JSON). | 1 byte           |
-| `PROP_LEN`   | The length of the field's value.        | 1 byte           |
-| `PROP_VALUE` | The field's value.                      | `PROP_LEN` bytes |
+*   `MyMessage.c`: The implementation of the serialization and deserialization functions.
 
 ### Project Integration
 
-The generated C code has external dependencies that must be included in your project's build system (e.g., `CMakeLists.txt`) to compile correctly.
+The generated C code has an external dependency that must be included in your project's build system (e.g., `CMakeLists.txt`) to compile correctly.
 
 1.  **`beta_protoc` Common code:**
     The core serialization helpers are located in the `protoc_common_code/C/` directory of this repository. You must add `beta_protoc.c` and `beta_protoc.h` to your project.
 
-2.  **`beta_com` Library:**
-    The generated code relies on a communication library (by default, `beta_com`) for protocol-level tasks like CRC calculation and COBS encoding. You must ensure this library is also included in your project.
+### Binary Message Format
+
+The serializer converts a C struct into a binary message composed of a header and a payload. All multi-byte integers are encoded in **little-endian** format.
+
+`[PROTOCOL_VERSION, MESSAGE_ID, MESSAGE_LEN, PAYLOAD...]`
+
+**Overall Message Structure:**
+
+| Field              | Description                                          | Size                |
+|--------------------|------------------------------------------------------|---------------------|
+| `PROTOCOL_VERSION` | The version of the serialization protocol.           | 1 byte              |
+| `MESSAGE_ID`       | The unique identifier for the message (from JSON).   | 1 byte              |
+| `MESSAGE_LEN`      | The length of the `PAYLOAD` in bytes.                | 1 byte              |
+| `PAYLOAD`          | The serialized data fields.                          | `MESSAGE_LEN` bytes |
+
+**Payload Field Structure:**
+
+The `PAYLOAD` consists of a sequence of fields, where each field is encoded as follows:
+
+`[FIELD_ID, FIELD_LEN, FIELD_VALUE...]`
+
+| Field        | Description                                  | Size             |
+|--------------|----------------------------------------------|------------------|
+| `FIELD_ID`   | The unique identifier for the field (from JSON). | 1 byte           |
+| `FIELD_LEN`  | The length of the `FIELD_VALUE` in bytes.    | 1 byte           |
+| `FIELD_VALUE`| The binary value of the field.               | `FIELD_LEN` bytes|
 
 ### Generated Functions
 
-For each message, the following functions are generated to facilitate serialization:
+For each message, the following functions are generated to facilitate serialization and deserialization:
 
 1.  **`struct <MessageName>`**
-    The C struct representing your message. **You must first populate this struct with the data you want to send.**
+    The C struct representing your message. You must first populate this struct with the data you want to send, or use it to receive deserialized data.
 
     ```c
     // Example for a "Position" message
@@ -238,7 +236,13 @@ For each message, the following functions are generated to facilitate serializat
     Serializes only the *payload* (the fields) of the struct into a provided buffer. This function is mainly used internally by `<MessageName>_to_message`.
 
 4.  **`int <MessageName>_to_message(<MessageName> data, uint8_t **buff, size_t *buff_len)`**
-    This is the main function to use. It takes the populated struct, fully serializes it (header + payload), calculates the CRC, and applies COBS encoding. The result is a complete binary message, ready to be sent.
+    This is the main function to use for serialization. It takes the populated struct and serializes it into a binary message format (header + payload).
+
+5.  **`int <MessageName>_from_buff(<MessageName> *data, uint8_t **buff, size_t *rem_buff)`**
+    Deserializes the *payload* from a buffer and populates the provided struct. This function is mainly used internally by `<MessageName>_from_message`.
+
+6.  **`int <MessageName>_from_message(<MessageName> *data, uint8_t **buff, size_t *rem_buff)`**
+    This is the main function to use for deserialization. It takes a buffer containing a binary message, validates the header, and deserializes the payload into the provided struct.
 
 ### Complete Example
 
@@ -247,6 +251,8 @@ For each message, the following functions are generated to facilitate serializat
 #include <stdio.h>
 
 int main() {
+    // --- Serialization ---
+
     // 1. Populate the message struct
     Position my_pos;
     my_pos.x = 10.5f;
@@ -257,16 +263,33 @@ int main() {
     uint8_t *p_buffer = output_buffer;
     size_t buffer_len = sizeof(output_buffer);
 
-    // 3. Serialize and encode the message
+    // 3. Serialize the message
     int result = Position_to_message(my_pos, &p_buffer, &buffer_len);
 
     if (result == 0) {
         size_t message_size = sizeof(output_buffer) - buffer_len;
         printf("Message encoded successfully (%zu bytes)!\n", message_size);
 
-        // The 'output_buffer' now contains the complete binary message
+        // The 'output_buffer' now contains the binary message
         // ready to be sent via UART, TCP, etc.
         // send_binary_data(output_buffer, message_size);
+
+        // --- Deserialization ---
+
+        // 4. Prepare to deserialize the message from the buffer
+        Position received_pos;
+        uint8_t *p_read_buffer = output_buffer;
+        size_t read_buffer_len = message_size;
+
+        int deserialize_result = Position_from_message(&received_pos, &p_read_buffer, &read_buffer_len);
+
+        if (deserialize_result == 0) {
+            printf("Message deserialized successfully!\n");
+            printf("Received Position: x=%.2f, y=%.2f\n", received_pos.x, received_pos.y);
+        } else {
+            fprintf(stderr, "Error deserializing message: %d\n", deserialize_result);
+        }
+
     } else {
         fprintf(stderr, "Error encoding message: %d\n", result);
     }
