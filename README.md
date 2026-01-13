@@ -297,7 +297,7 @@ int main() {
     size_t buffer_len = sizeof(output_buffer);
 
     // 3. Serialize the message
-    int result = Position_to_message(my_pos, &p_buffer, &buffer_len);
+    int result = Position_to_message(&my_pos, &p_buffer, &buffer_len);
 
     if (result == 0) {
         size_t message_size = sizeof(output_buffer) - buffer_len;

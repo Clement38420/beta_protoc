@@ -20,29 +20,29 @@ typedef struct {
 
 /**
  * @brief Calculates the serialized size of the {{ message.name }} message payload.
- * @param data The struct to measure.
+ * @param data Pointer to the struct to measure.
  * @param size Pointer to a size_t variable to store the calculated size.
  * @return 0 on success, error code otherwise.
  */
-int get_{{ lang.camel_to_proper_case(message.name) }}_size({{ message.name }} data, size_t *size);
+int get_{{ lang.camel_to_proper_case(message.name) }}_size(const {{ message.name }} *data, size_t *size);
 
 /**
  * @brief Serializes the {{ message.name }} message payload into a buffer.
- * @param data The struct to serialize.
+ * @param data Pointer to the struct to serialize.
  * @param buff Double pointer to the buffer where the payload will be written. The pointer is advanced by the number of bytes written.
  * @param rem_buff Pointer to the remaining buffer size. The value is decremented by the number of bytes written.
  * @return 0 on success, error code otherwise.
  */
-int {{ lang.camel_to_proper_case(message.name) }}_to_buff({{ message.name }} data, uint8_t **buff, size_t *rem_buff);
+int {{ lang.camel_to_proper_case(message.name) }}_to_buff(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
 
 /**
  * @brief Serializes the {{ message.name }} message into a complete binary message (header + payload).
- * @param data The struct to serialize.
+ * @param data Pointer to the struct to serialize.
  * @param buff Double pointer to the buffer where the message will be written. The pointer is advanced by the number of bytes written.
  * @param rem_buff Pointer to the remaining buffer size. The value is decremented by the number of bytes written.
  * @return 0 on success, error code otherwise.
  */
-int {{ lang.camel_to_proper_case(message.name) }}_to_message({{ message.name }} data, uint8_t **buff, size_t *rem_buff);
+int {{ lang.camel_to_proper_case(message.name) }}_to_message(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
 
 /**
  * @brief Deserializes the payload of a {{ message.name }} message from a buffer into a struct.
