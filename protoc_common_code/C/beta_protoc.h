@@ -5,13 +5,16 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define PROTOCOL_VERSION 1
+#define PROTOC_VERSION 1
 #define MESSAGE_HEADER_SIZE 3 // 1 byte for protocol version, 1 byte for message ID, 1 byte for message length
 
 typedef enum {
-    BETA_PROTOC_SUCCESS = 0,               // Operation successful
-    BETA_PROTOC_ERR_INVALID_ARGS = -10,     // NULL pointers passed as parameters
+    BETA_PROTOC_SUCCESS = 0, // Operation successful
+    BETA_PROTOC_ERR_INVALID_ARGS = -10, // NULL pointers passed as parameters
     BETA_PROTOC_ERR_BUFFER_TOO_SMALL = -11, // Output or work buffer too small
+    BETA_PROTOC_ERR_INVALID_ID = -12, // Message ID does not match the struct
+    BETA_PROTOC_ERR_INVALID_PROTOC_VERSION = -13, // Protoc version does not match
+    BETA_PROTOC_ERR_INVALID_DATA = -14, // General data error
 } beta_protoc_err_t;
 
 beta_protoc_err_t int8_to_buff(int8_t data, uint8_t **buff, size_t *buff_len);
