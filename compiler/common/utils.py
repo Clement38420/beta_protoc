@@ -11,12 +11,13 @@ def loc_to_path(loc: tuple, data: Dict) -> str:
         A string representing the path to the error, e.g., "/messages/MyMessage/fields[0]/name".
     """
     path = ""
-    field = loc[-1]
     curr = data
-    for index in loc[:-1]:
+    for index in loc:
+
         try:
             curr = curr[index]
         except (KeyError, IndexError, TypeError):
+            path = "/".join([path, str(index)])
             break
 
         if isinstance(curr, dict) and curr.get("name"):
@@ -26,4 +27,4 @@ def loc_to_path(loc: tuple, data: Dict) -> str:
         else:
             path = "/".join([path, str(index)])
 
-    return f"{path}/{field}"
+    return path
