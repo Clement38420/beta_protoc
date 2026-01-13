@@ -7,6 +7,7 @@
 
 #define PROTOC_VERSION 1
 #define MESSAGE_HEADER_SIZE 3 // 1 byte for protocol version, 1 byte for message ID, 1 byte for message length
+#define STRING_MAX_SIZE 32 // Array allocation for strings
 
 typedef enum {
     BETA_PROTOC_SUCCESS = 0, // Operation successful
