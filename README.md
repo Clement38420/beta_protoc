@@ -81,7 +81,9 @@ You can use the following primitive types or the name of another message defined
 | **Unsigned Integers** | `uint8`, `uint16`, `uint32`, `uint64` |
 | **Signed Integers** | `int8`, `int16`, `int32`, `int64` |
 | **Floating Point** | `float32`, `float64` |
-| **Text / Logic** | `char`, `string`, `bool` |
+| **Text / Logic** | `char`, `string[SIZE]`, `bool` |
+
+`SIZE` must be an integer specifying the maximum length of the string.
 
 ### Key Considerations
 

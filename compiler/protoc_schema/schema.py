@@ -128,14 +128,13 @@ class ProtocSchema(BaseModel):
 
             # Tests the validity of the fields type
             for field_index, f in enumerate(message.fields):
-                    f.normalize_type()
-                    if not f.is_primitive:
-                        if f.type not in messages_name:
-                            loc = ("messages", msg_index, "fields", field_index, "type")
-                            errors_to_raise.append(JSONParsingErrorDetails(
-                                message=f"{f.type} is not a valid type (not a primitive nor a defined message).",
-                                loc=loc
-                            ))
+                if not f.is_primitive:
+                    if f.type not in messages_name:
+                        loc = ("messages", msg_index, "fields", field_index, "type")
+                        errors_to_raise.append(JSONParsingErrorDetails(
+                            message=f"{f.type} is not a valid type (not a primitive nor a defined message).",
+                            loc=loc
+                        ))
 
             message.resolve_dependencies()
 

@@ -94,7 +94,7 @@ int {{ lang.camel_to_proper_case(message.name) }}_from_buff({{ message.name }} *
             case {{ field.id }}:
             {
                 {% if field.type == "string" %}
-                if (field_len >= STRING_MAX_SIZE) return BETA_PROTOC_ERR_INVALID_DATA;
+                if (field_len >= {{ field.size }}) return BETA_PROTOC_ERR_INVALID_DATA;
                 int result = {{ lang.camel_to_proper_case(field.type) }}_from_buff(data->{{ field.name }}, field_len, buff, rem_buff);
                 data->{{ field.name }}[field_len] = '\0';
                 {% else %}

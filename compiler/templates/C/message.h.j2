@@ -14,7 +14,7 @@
 
 typedef struct {
 {%- for field in message.fields %}
-    {{ lang.convert_type(field.type) }} {{ field.name }}{% if field.type == "string" %}[STRING_MAX_SIZE]{% endif %};
+    {{ lang.convert_type(field.type) }} {{ field.name }}{% if field.type == "string" %}[{{ field.size }}]{% endif %};
 {%- endfor %}
 } {{ message.name }};
 
