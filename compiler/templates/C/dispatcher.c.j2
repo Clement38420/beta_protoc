@@ -1,0 +1,29 @@
+#include "dispatcher.h"
+
+dispatcher_err_t protoc_dispatch(uint8_t **buff, size_t *rem_buff) {
+    uint8_t *p_buff = *buff;
+
+    if (*rem_buff < MESSAGE_HEADER_SIZE) return DISPATCHER_ERR_INVALID_DATA;
+    if (p_buff[0] != PROTOC_VERSION) {
+            (*buff)++; // Move forward to try to identify a message
+            (*rem_buff)--;
+        return DISPATCHER_ERR_INVALID_PROTOC_VERSION;
+    }
+
+    switch(p_buff[1]) {
+    {% for message in messages %}
+        case {{ message.id }}: {
+            {{ message.name }} msg;
+            int result = {{ lang.camel_to_proper_case(message.name) }}_from_message(&msg, buff, rem_buff);
+            if (result != 0) return result;
+
+            on_{{ lang.camel_to_proper_case(message.name) }}_received(&msg);
+            return DISPATCHER_SUCCESS;
+        }
+    {% endfor %}
+    default:
+        (*buff)++; // Move forward to try to identify a message
+        (*rem_buff)--;
+        return DISPATCHER_ERR_UNKNOWN_ID;
+    }
+}

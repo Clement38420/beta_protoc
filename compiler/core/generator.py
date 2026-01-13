@@ -37,6 +37,15 @@ class Generator:
 
             (out_dir / lang.name).mkdir(parents=True, exist_ok=True)
 
+            dispatcher_content = self.env.get_template(f"{lang.name}/dispatcher.{lang.src_ext}.j2").render(messages=messages, lang=lang)
+            with open(out_dir / lang.name / ("dispatcher." + lang.src_ext), "w") as f:
+                f.write(dispatcher_content)
+
+            if gen_header:
+                dispatcher_header_content = self.env.get_template(f"{lang.name}/dispatcher.{lang.header_ext}.j2").render(messages=messages, lang=lang)
+                with open(out_dir / lang.name / ("dispatcher." + lang.header_ext), "w") as f:
+                    f.write(dispatcher_header_content)
+
             for message in messages:
                 src_content = src_template.render(message=message, lang=lang)
                 with open(out_dir / lang.name / (message.name + "." + lang.src_ext), "w") as f:

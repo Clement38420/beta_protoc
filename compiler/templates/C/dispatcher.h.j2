@@ -1,0 +1,23 @@
+#ifndef DISPATCHER_H
+#define DISPATCHER_H
+
+#include <stdint.h>
+#include "beta_protoc.h"
+
+{%- for message in messages %}
+#include "{{ message.name }}.h"
+{%- endfor %}
+
+typedef enum {
+    DISPATCHER_SUCCESS = 0, // Operation successful
+    DISPATCHER_ERR_INVALID_DATA = -1,
+    DISPATCHER_ERR_INVALID_PROTOC_VERSION = -2, // Mismatch on protoc versions
+    DISPATCHER_ERR_UNKNOWN_ID = -3 // Unknown message id
+} dispatcher_err_t;
+
+{% for message in messages %}
+void on_{{ lang.camel_to_proper_case(message.name) }}_received({{ message.name }} *msg);{% endfor %}
+
+dispatcher_err_t protoc_dispatch(uint8_t **buff, size_t *rem_buff);
+
+#endif // DISPATCHER_H

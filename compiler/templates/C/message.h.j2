@@ -25,4 +25,4 @@ int {{ lang.camel_to_proper_case(message.name) }}_to_message({{ message.name }} 
 int {{ lang.camel_to_proper_case(message.name) }}_from_buff({{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
 int {{ lang.camel_to_proper_case(message.name) }}_from_message({{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
 
-#endif
+#endif // {{ message.name|upper }}_MSG_H

@@ -1,6 +1,6 @@
 # Beta Protoc Compiler
 
-**Beta Protoc Compiler** is a command-line interface (CLI) tool designed to generate serialization code and data structures from JSON message definitions. It is specifically built to facilitate serial communication, particularly when working with the `beta_com` library.
+**Beta Protoc Compiler** is a command-line interface (CLI) tool designed to generate serialization code and data structures from JSON message definitions. It is specifically built to facilitate serial communication.
 
 ## Features
 
@@ -94,7 +94,7 @@ You can use the following primitive types or the name of another message defined
 
 Currently, the compiler supports:
 
-* **C** (`.c`, `.h`): Generates structs and includes `beta_com.h` and dependent message headers.
+* **C** (`.c`, `.h`): Generates structs and dependent message headers.
 
 ## Adding a New Language
 
@@ -190,8 +190,11 @@ The generated C code has an external dependency that must be included in your pr
 
 ### Binary Message Format
 
-The serializer converts a C struct into a binary message composed of a header and a payload. All multi-byte integers are encoded in **little-endian** format.
+The serializer converts a C struct into a binary message. It's the user's responsibility to handle message framing (e.g., adding start/end bytes) if the communication channel requires it.
 
+All multi-byte integers are encoded in **little-endian** format.
+
+**Message Format:**
 `[PROTOCOL_VERSION, MESSAGE_ID, MESSAGE_LEN, PAYLOAD...]`
 
 **Overall Message Structure:**
@@ -214,6 +217,26 @@ The `PAYLOAD` consists of a sequence of fields, where each field is encoded as f
 | `FIELD_ID`   | The unique identifier for the field (from JSON). | 1 byte           |
 | `FIELD_LEN`  | The length of the `FIELD_VALUE` in bytes.    | 1 byte           |
 | `FIELD_VALUE`| The binary value of the field.               | `FIELD_LEN` bytes|
+
+### From Binary to Struct
+
+The deserialization process, handled by the `_from_message` functions, performs the reverse operation:
+1.  It reads the message header (`PROTOCOL_VERSION`, `MESSAGE_ID`, `MESSAGE_LEN`) to validate the message.
+2.  It iterates through the `PAYLOAD`, reading each field's header (`FIELD_ID`, `FIELD_LEN`).
+3.  It extracts the `FIELD_VALUE` and copies it into the corresponding member of the C struct.
+4.  Multi-byte values are converted from little-endian back to the host's byte order.
+
+### The Dispatcher (Optional)
+
+To simplify message handling, the compiler also generates a `dispatcher`. It is a set of files (`dispatcher.c` and `dispatcher.h`) that can automatically read an incoming byte stream, identify a message, deserialize it, and call a user-defined callback function.
+
+**Features:**
+
+*   **Automatic Message Identification:** Reads the message header and determines the message type.
+*   **Callback System:** For each message `MyMessage`, it calls a weak function `on_MyMessage_received(MyMessage *msg)` that you can implement in your application.
+*   **Stream-Safe:** The dispatcher can be fed bytes one by one or in chunks, and it will find messages in the stream.
+
+To use it, include `dispatcher.h` in your project and implement the `on_<MessageName>_received` functions for the messages you want to handle. Then, feed your incoming data stream to the `protoc_dispatch` function.
 
 ### Generated Functions
 
@@ -246,9 +269,19 @@ For each message, the following functions are generated to facilitate serializat
 
 ### Complete Example
 
+Here is an example demonstrating serialization and deserialization using the dispatcher.
+
 ```c
 #include "Position.h"
+#include "dispatcher.h"
 #include <stdio.h>
+
+// --- User-defined callback ---
+// This function is called by the dispatcher when a Position message is received.
+void on_Position_received(Position *msg) {
+    printf("Callback triggered!\n");
+    printf("Received Position: x=%.2f, y=%.2f\n", msg->x, msg->y);
+}
 
 int main() {
     // --- Serialization ---
@@ -270,24 +303,21 @@ int main() {
         size_t message_size = sizeof(output_buffer) - buffer_len;
         printf("Message encoded successfully (%zu bytes)!\n", message_size);
 
-        // The 'output_buffer' now contains the binary message
-        // ready to be sent via UART, TCP, etc.
-        // send_binary_data(output_buffer, message_size);
+        // The 'output_buffer' now contains the binary message.
+        // In a real application, you would receive this data from a serial port, socket, etc.
 
-        // --- Deserialization ---
+        // --- Deserialization with Dispatcher ---
 
-        // 4. Prepare to deserialize the message from the buffer
-        Position received_pos;
+        // 4. Feed the buffer to the dispatcher
         uint8_t *p_read_buffer = output_buffer;
         size_t read_buffer_len = message_size;
-
-        int deserialize_result = Position_from_message(&received_pos, &p_read_buffer, &read_buffer_len);
-
-        if (deserialize_result == 0) {
-            printf("Message deserialized successfully!\n");
-            printf("Received Position: x=%.2f, y=%.2f\n", received_pos.x, received_pos.y);
-        } else {
-            fprintf(stderr, "Error deserializing message: %d\n", deserialize_result);
+        
+        while(read_buffer_len > 0) {
+            dispatcher_err_t dispatch_result = protoc_dispatch(&p_read_buffer, &read_buffer_len);
+            if (dispatch_result == DISPATCHER_SUCCESS) {
+                printf("Dispatcher found and processed a message.\n");
+            }
+            // The dispatcher advances the buffer pointer automatically.
         }
 
     } else {
@@ -297,4 +327,30 @@ int main() {
     return 0;
 }
 ```
+
+
+## Future Improvements
+
+This compiler is under active development. Here are some ideas for future enhancements:
+
+### Array Support
+
+Handling arrays is a common need in communication protocols. Here’s how it could be implemented:
+
+*   **Fixed-size arrays:** For fields that are always of the same length (e.g., a `float32[3]` for a 3D vector).
+    *   **Schema:** Could be defined in JSON as `"type": "float32[3]"`.
+    *   **Generated Code (C):** Would generate a simple array in the struct (e.g., `float x[3];`). Serialization would involve iterating through the array.
+
+*   **Dynamic arrays:** For fields of variable length (e.g., a list of sensor readings).
+    *   **Schema:** Could be defined as `"type": "uint16[]"`.
+    *   **Generated Code (C):** This is more complex. It would require a pointer and a size field in the struct (e.g., `uint16_t* values; size_t num_values;`).
+    *   **Serialization:** The binary format would need to encode the number of elements followed by the elements themselves. This would require careful memory management during deserialization (e.g., using `malloc`).
+
+### Other Potential Features
+
+*   **Enumerations (Enums):** Add support for defining enums in the JSON schema to create named constants, which improves code readability.
+*   **Field Constraints:** Allow specifying constraints in the JSON schema (e.g., min/max values for numbers, max length for strings) and generate validation code.
+*   **More Languages:** Add support for other popular languages like Python or C++.
+*   **Automated Build System Integration:** Generate `CMake` or `Makefile` snippets to simplify the integration of the generated code into larger projects.
+*   **Oneof / Union Support:** Implement a `oneof` keyword to allow a message to contain one of a set of fields, which is useful for saving memory when only one field is used at a time.
 
