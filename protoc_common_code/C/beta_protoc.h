@@ -36,7 +36,7 @@ beta_protoc_err_t uint64_to_buff(uint64_t data, uint8_t **buff, size_t *rem_buff
 beta_protoc_err_t float_to_buff(float data, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t double_to_buff(double data, uint8_t **buff, size_t *rem_buff);
 
-beta_protoc_err_t string_to_buff(char *data, size_t data_len, uint8_t **buff, size_t *rem_buff);
+beta_protoc_err_t string_to_buff(const char *data, size_t data_len, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t char_to_buff(char data, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t bool_to_buff(bool data, uint8_t **buff, size_t *rem_buff);
 

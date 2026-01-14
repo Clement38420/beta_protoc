@@ -60,7 +60,7 @@ beta_protoc_err_t double_to_buff(double data, uint8_t **buff, size_t *rem_buff) 
     return _write_unsigned(converter.u, 8, buff, rem_buff);
 }
 
-beta_protoc_err_t string_to_buff(char *data, size_t data_len, uint8_t **buff, size_t *rem_buff) {
+beta_protoc_err_t string_to_buff(const char *data, size_t data_len, uint8_t **buff, size_t *rem_buff) {
     if (buff == NULL || *buff == NULL || rem_buff == NULL) {
         return BETA_PROTOC_ERR_INVALID_ARGS;
     }
