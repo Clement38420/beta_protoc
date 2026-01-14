@@ -10,9 +10,9 @@
 
 typedef enum {
     DISPATCHER_SUCCESS = 0, // Operation successful
-    DISPATCHER_ERR_INVALID_DATA = -1,
-    DISPATCHER_ERR_INVALID_PROTOC_VERSION = -2, // Mismatch on protoc versions
-    DISPATCHER_ERR_UNKNOWN_ID = -3 // Unknown message id
+    DISPATCHER_ERR_INVALID_DATA = -100,
+    DISPATCHER_ERR_INVALID_PROTOC_VERSION = -101, // Mismatch on protoc versions
+    DISPATCHER_ERR_UNKNOWN_ID = -102 // Unknown message id
 } dispatcher_err_t;
 
 {% for message in messages %}
@@ -29,8 +29,8 @@ void on_{{ lang.camel_to_proper_case(message.name) }}_received({{ message.name }
  *        deserializes it, and calls the appropriate `on_<MessageName>_received` callback.
  * @param buff Double pointer to the buffer containing the binary message. The pointer is advanced past the processed message.
  * @param rem_buff Pointer to the remaining buffer size. The value is decremented by the size of the processed message.
- * @return DISPATCHER_SUCCESS on success, or a dispatcher_err_t error code on failure.
+ * @return DISPATCHER_SUCCESS on success, or an error code on failure.
  */
-dispatcher_err_t protoc_dispatch(uint8_t **buff, size_t *rem_buff);
+int protoc_dispatch(uint8_t **buff, size_t *rem_buff);
 
 #endif // DISPATCHER_H

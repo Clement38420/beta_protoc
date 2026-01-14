@@ -321,7 +321,7 @@ int main() {
         size_t read_buffer_len = message_size;
         
         while(read_buffer_len > 0) {
-            dispatcher_err_t dispatch_result = protoc_dispatch(&p_read_buffer, &read_buffer_len);
+            int dispatch_result = protoc_dispatch(&p_read_buffer, &read_buffer_len);
             if (dispatch_result == DISPATCHER_SUCCESS) {
                 printf("Dispatcher found and processed a message.\n");
             }

@@ -11,11 +11,11 @@
 
 typedef enum {
     BETA_PROTOC_SUCCESS = 0, // Operation successful
-    BETA_PROTOC_ERR_INVALID_ARGS = -10, // NULL pointers passed as parameters
-    BETA_PROTOC_ERR_BUFFER_TOO_SMALL = -11, // Output or work buffer too small
-    BETA_PROTOC_ERR_INVALID_ID = -12, // Message ID does not match the struct
-    BETA_PROTOC_ERR_INVALID_PROTOC_VERSION = -13, // Protoc version does not match
-    BETA_PROTOC_ERR_INVALID_DATA = -14, // General data error
+    BETA_PROTOC_ERR_INVALID_ARGS = -1, // NULL pointers passed as parameters
+    BETA_PROTOC_ERR_BUFFER_TOO_SMALL = -2, // Output or work buffer too small
+    BETA_PROTOC_ERR_INVALID_ID = -3, // Message ID does not match the struct
+    BETA_PROTOC_ERR_INVALID_PROTOC_VERSION = -4, // Protoc version does not match
+    BETA_PROTOC_ERR_INVALID_DATA = -5, // General data error
 } beta_protoc_err_t;
 
 beta_protoc_err_t varint_to_buff(uint64_t data, uint8_t **buff, size_t *rem_buff);
