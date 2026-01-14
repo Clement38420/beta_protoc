@@ -204,8 +204,8 @@ All multi-byte integers are encoded in **little-endian** format.
 | Field              | Description                                          | Size                |
 |--------------------|------------------------------------------------------|---------------------|
 | `PROTOCOL_VERSION` | The version of the serialization protocol.           | 1 byte              |
-| `MESSAGE_ID`       | The unique identifier for the message (from JSON).   | 1 byte              |
-| `MESSAGE_LEN`      | The length of the `PAYLOAD` in bytes.                | 1 byte              |
+| `MESSAGE_ID`       | The unique identifier for the message (from JSON).   | 2 bytes             |
+| `MESSAGE_LEN`      | The length of the `PAYLOAD` in bytes.                | Varint (1-10 bytes)  |
 | `PAYLOAD`          | The serialized data fields.                          | `MESSAGE_LEN` bytes |
 
 **Payload Field Structure:**
@@ -214,20 +214,17 @@ The `PAYLOAD` consists of a sequence of fields, where each field is encoded as f
 
 `[FIELD_ID, FIELD_LEN, FIELD_VALUE...]`
 
-| Field        | Description                                  | Size             |
-|--------------|----------------------------------------------|------------------|
-| `FIELD_ID`   | The unique identifier for the field (from JSON). | 1 byte           |
-| `FIELD_LEN`  | The length of the `FIELD_VALUE` in bytes.    | 1 byte           |
-| `FIELD_VALUE`| The binary value of the field.               | `FIELD_LEN` bytes|
+| Field        | Description                                  | Size                |
+|--------------|----------------------------------------------|---------------------|
+| `FIELD_ID`   | The unique identifier for the field (from JSON). | Varint (1-10 bytes) |
+| `FIELD_LEN`  | The length of the `FIELD_VALUE` in bytes.    | Varint (1-10 bytes) |
+| `FIELD_VALUE`| The binary value of the field.               | `FIELD_LEN` bytes   |
 
 ### ID and Size Limitations
 
-*   **Message ID:** The `MESSAGE_ID` is currently a 1-byte integer, limiting the protocol to a maximum of **256 unique messages**.
-*   **Field ID:** Similarly, the `FIELD_ID` within each message is a 1-byte integer, allowing for a maximum of **256 unique fields per message**.
-
-These limitations are planned to be addressed in future updates:
-- The `MESSAGE_ID` will be expanded to 2 bytes, increasing the total number of possible messages to 65,536.
-- The `FIELD_ID` will be encoded using varints, removing the 256-field limit and optimizing space for smaller IDs.
+*   **Message ID:** The `MESSAGE_ID` is a 2-byte integer, allowing for up to **65,536 unique messages**.
+*   **Field ID:** The `FIELD_ID` is encoded as a variable-length integer (varint), allowing for up to **2^64 unique fields** per message.
+*   **Message and Field Size:** The `MESSAGE_LEN` and `FIELD_LEN` are also encoded as varints, allowing for payloads and fields a theoretical **maximum length of 2^64 bytes**.
 
 ### From Binary to Struct
 
@@ -289,7 +286,7 @@ Here is an example demonstrating serialization and deserialization using the dis
 
 // --- User-defined callback ---
 // This function is called by the dispatcher when a Position message is received.
-void on_Position_received(Position *msg) {
+void on_position_received(Position *msg) {
     printf("Callback triggered!\n");
     printf("Received Position: x=%.2f, y=%.2f\n", msg->x, msg->y);
 }
@@ -308,7 +305,7 @@ int main() {
     size_t buffer_len = sizeof(output_buffer);
 
     // 3. Serialize the message
-    int result = Position_to_message(&my_pos, &p_buffer, &buffer_len);
+    int result = position_to_message(my_pos, &p_buffer, &buffer_len);
 
     if (result == 0) {
         size_t message_size = sizeof(output_buffer) - buffer_len;
