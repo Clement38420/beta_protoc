@@ -18,10 +18,9 @@ typedef enum {
     BETA_PROTOC_ERR_INVALID_DATA = -14, // General data error
 } beta_protoc_err_t;
 
-beta_protoc_err_t int8_to_buff(int8_t data, uint8_t **buff, size_t *buff_len);
-beta_protoc_err_t int16_to_buff(int16_t data, uint8_t **buff, size_t *buff_len);
-beta_protoc_err_t int32_to_buff(int32_t data, uint8_t **buff, size_t *buff_len);
-beta_protoc_err_t int64_to_buff(int64_t data, uint8_t **buff, size_t *buff_len);
+beta_protoc_err_t varint_to_buff(uint64_t data, uint8_t **buff, size_t *rem_buff);
+beta_protoc_err_t varint_from_buff(uint64_t *data, uint8_t **buff, size_t *rem_buff);
+beta_protoc_err_t varint_size(uint64_t data, size_t *out_size);
 
 beta_protoc_err_t int8_to_buff(int8_t data, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t int16_to_buff(int16_t data, uint8_t **buff, size_t *rem_buff);

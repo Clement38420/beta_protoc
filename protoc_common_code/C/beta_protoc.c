@@ -2,6 +2,71 @@
 
 #include <string.h>
 
+beta_protoc_err_t varint_to_buff(uint64_t data, uint8_t **buff, size_t *rem_buff) {
+    if (buff == NULL || *buff == NULL || rem_buff == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
+
+    do {
+        if (*rem_buff < 1) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
+
+        uint8_t byte = data & 0x7F;
+
+        data >>= 7;
+        if (data != 0) {
+            byte |= 0x80; // More bytes to come
+        }
+
+        **buff = byte;
+        (*buff)++;
+        (*rem_buff)--;
+
+    } while (data != 0);
+
+    return BETA_PROTOC_SUCCESS;
+}
+
+beta_protoc_err_t varint_from_buff(uint64_t *data, uint8_t **buff, size_t *rem_buff) {
+    if (data == NULL || buff == NULL || *buff == NULL || rem_buff == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
+
+    *data = 0;
+    uint8_t shift = 0;
+
+     while (1) {
+        if (*rem_buff < 1) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
+
+        uint8_t byte = **buff;
+        (*buff)++;
+        (*rem_buff)--;
+
+        *data |= ((uint64_t) (byte & 0x7F)) << shift;
+
+        if ((byte & 0x80) == 0) {
+            return BETA_PROTOC_SUCCESS;
+        }
+
+        shift += 7;
+
+        if (shift >= 64) return BETA_PROTOC_ERR_INVALID_DATA;
+    }
+}
+
+beta_protoc_err_t varint_size(uint64_t data, size_t *out_size) {
+    if (out_size == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
+
+    *out_size = 0;
+    do {
+        (*out_size)++;
+        data >>= 7;
+    } while (data != 0);
+
+    return BETA_PROTOC_SUCCESS;
+}
+
 static beta_protoc_err_t _write_unsigned(uint64_t data, size_t size, uint8_t **buff, size_t *rem_buff) {
     if (*rem_buff < size) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
 
