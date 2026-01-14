@@ -3,14 +3,14 @@
 dispatcher_err_t protoc_dispatch(uint8_t **buff, size_t *rem_buff) {
     uint8_t *p_buff = *buff;
 
-    if (*rem_buff < MESSAGE_HEADER_SIZE) return DISPATCHER_ERR_INVALID_DATA;
+    if (*rem_buff < 3) return DISPATCHER_ERR_INVALID_DATA;
     if (p_buff[0] != PROTOC_VERSION) {
             (*buff)++; // Move forward to try to identify a message
             (*rem_buff)--;
         return DISPATCHER_ERR_INVALID_PROTOC_VERSION;
     }
 
-    switch(p_buff[1]) {
+    switch(((uint16_t) p_buff[2] << 8) | (uint16_t) p_buff[1]) {
     {% for message in messages %}
         case {{ message.id }}: {
             {{ message.name }} msg;
