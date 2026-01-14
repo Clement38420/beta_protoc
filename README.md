@@ -220,11 +220,14 @@ The `PAYLOAD` consists of a sequence of fields, where each field is encoded as f
 | `FIELD_LEN`  | The length of the `FIELD_VALUE` in bytes.    | 1 byte           |
 | `FIELD_VALUE`| The binary value of the field.               | `FIELD_LEN` bytes|
 
-### Size Limitations
+### ID and Size Limitations
 
-Currently, both the total message payload and individual fields have a size limit of 255 bytes. This is because the `MESSAGE_LEN` and `FIELD_LEN` headers are each encoded on a single byte.
+*   **Message ID:** The `MESSAGE_ID` is currently a 1-byte integer, limiting the protocol to a maximum of **256 unique messages**.
+*   **Field ID:** Similarly, the `FIELD_ID` within each message is a 1-byte integer, allowing for a maximum of **256 unique fields per message**.
 
-This limitation is expected to be removed in a future version with the implementation of variable-length integers (varints), which will allow for much larger message and field sizes.
+These limitations are planned to be addressed in future updates:
+- The `MESSAGE_ID` will be expanded to 2 bytes, increasing the total number of possible messages to 65,536.
+- The `FIELD_ID` will be encoded using varints, removing the 256-field limit and optimizing space for smaller IDs.
 
 ### From Binary to Struct
 
