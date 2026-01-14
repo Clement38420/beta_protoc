@@ -36,16 +36,17 @@ beta_protoc_compiler path/to/your_schema.json
 
 ### Options
 
-| Argument | Description | Default |
-| --- | --- | --- |
-| `filepath` | The path to the input JSON file containing message definitions. | *(Required)* |
-| `-o`, `--out` | The directory where the generated files will be saved. | `./generated` |
-| `--clean` | Deletes the output directory before generating new files. | `False` |
+| Argument | Description | Default                 |
+| --- | --- |-------------------------|
+| `filepath` | The path to the input JSON file containing message definitions. | *(Required)*            |
+| `-l`, `--lang` | The output language(s) for the generated files. Can be one or more. | All supported languages |
+| `-o`, `--out` | The directory where the generated files will be saved. | `./generated`           |
+| `--clean` | Deletes the output directory before generating new files. | `False`                 |
 
 **Example:**
 
 ```bash
-beta_protoc_compiler my_protocol.json -o ./src/protocol --clean
+beta_protoc_compiler my_protocol.json -l c -o ./src/protocol --clean
 ```
 
 ## Schema Format (JSON)
@@ -165,7 +166,7 @@ The compiler will automatically locate and use these templates during generation
 **Command:**
 
 ```bash
-beta_protoc_compiler msg.json
+beta_protoc_compiler msg.json -l c
 ```
 
 **Output (C):**
