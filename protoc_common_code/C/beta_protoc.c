@@ -112,17 +112,17 @@ beta_protoc_err_t uint64_to_buff(uint64_t data, uint8_t **buff, size_t *rem_buff
 }
 
 beta_protoc_err_t float_to_buff(float data, uint8_t **buff, size_t *rem_buff) {
-    union { float f; uint32_t u; } converter;
-    converter.f = data;
+    uint32_t u_val;
+    memcpy(&u_val, &data, sizeof(uint32_t));
 
-    return _write_unsigned(converter.u, 4, buff, rem_buff);
+    return _write_unsigned(u_val, 4, buff, rem_buff);
 }
 
 beta_protoc_err_t double_to_buff(double data, uint8_t **buff, size_t *rem_buff) {
-    union { double f; uint64_t u; } converter;
-    converter.f = data;
+    uint64_t u_val;
+    memcpy(&u_val, &data, sizeof(uint64_t));
 
-    return _write_unsigned(converter.u, 8, buff, rem_buff);
+    return _write_unsigned(u_val, 8, buff, rem_buff);
 }
 
 beta_protoc_err_t string_to_buff(const char *data, size_t data_len, uint8_t **buff, size_t *rem_buff) {
@@ -219,9 +219,8 @@ beta_protoc_err_t float_from_buff(float *data, uint8_t **buff, size_t *rem_buff)
     uint64_t temp;
     beta_protoc_err_t err = _read_unsigned(&temp, 4, buff, rem_buff);
     if (err == BETA_PROTOC_SUCCESS) {
-        union { uint32_t u; float f; } converter;
-        converter.u = (uint32_t)temp;
-        *data = converter.f;
+        uint32_t u_val = (uint32_t) temp;
+        memcpy(data, &u_val, sizeof(float));
     }
     return err;
 }
@@ -230,9 +229,7 @@ beta_protoc_err_t double_from_buff(double *data, uint8_t **buff, size_t *rem_buf
     uint64_t temp;
     beta_protoc_err_t err = _read_unsigned(&temp, 8, buff, rem_buff);
     if (err == BETA_PROTOC_SUCCESS) {
-        union { uint64_t u; double f; } converter;
-        converter.u = temp;
-        *data = converter.f;
+        memcpy(data, &temp, sizeof(double));
     }
     return err;
 }
