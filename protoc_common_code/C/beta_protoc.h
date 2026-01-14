@@ -5,9 +5,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define PROTOC_VERSION 1
-#define MESSAGE_HEADER_SIZE 3 // 1 byte for protocol version, 1 byte for message ID, 1 byte for message length
-#define STRING_MAX_SIZE 32 // Array allocation for strings
 
 typedef enum {
     BETA_PROTOC_SUCCESS = 0, // Operation successful
@@ -55,5 +57,9 @@ beta_protoc_err_t double_from_buff(double *data, uint8_t **buff, size_t *rem_buf
 beta_protoc_err_t bool_from_buff(bool *data, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t char_from_buff(char *data, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t string_from_buff(char *data, size_t data_len, uint8_t **buff, size_t *rem_buff);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BETA_PROTOC_H

@@ -8,6 +8,10 @@
 #include "{{ message.name }}.h"
 {%- endfor %}
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     DISPATCHER_SUCCESS = 0, // Operation successful
     DISPATCHER_ERR_INVALID_DATA = -100,
@@ -32,5 +36,9 @@ void on_{{ lang.camel_to_proper_case(message.name) }}_received({{ message.name }
  * @return DISPATCHER_SUCCESS on success, or an error code on failure.
  */
 int protoc_dispatch(uint8_t **buff, size_t *rem_buff);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // DISPATCHER_H

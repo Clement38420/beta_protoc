@@ -12,6 +12,10 @@
 #include "{{ dep }}.h"
 {%- endfor %}
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
 {%- for field in message.fields %}
     {{ lang.convert_type(field.type) }} {{ field.name }}{% if field.type == "string" %}[{{ field.size }}]{% endif %};
@@ -61,5 +65,9 @@ int {{ lang.camel_to_proper_case(message.name) }}_from_buff({{ message.name }} *
  * @return 0 on success, error code otherwise.
  */
 int {{ lang.camel_to_proper_case(message.name) }}_from_message({{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // {{ message.name|upper }}_MSG_H
