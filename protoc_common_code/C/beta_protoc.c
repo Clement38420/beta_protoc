@@ -2,6 +2,14 @@
 
 #include <string.h>
 
+size_t safe_strlen(const char *str, size_t max_len) {
+    size_t len = 0;
+    while (len < max_len && str[len] != '\0') {
+        len++;
+    }
+    return len;
+}
+
 beta_protoc_err_t varint_to_buff(uint64_t data, uint8_t **buff, size_t *rem_buff) {
     if (buff == NULL || *buff == NULL || rem_buff == NULL) {
         return BETA_PROTOC_ERR_INVALID_ARGS;

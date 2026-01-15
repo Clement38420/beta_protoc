@@ -21,6 +21,8 @@ typedef enum {
     BETA_PROTOC_ERR_INVALID_DATA = -6, // General data error
 } beta_protoc_err_t;
 
+size_t safe_strlen(const char *str, size_t max_len);
+
 beta_protoc_err_t varint_to_buff(uint64_t data, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t varint_from_buff(uint64_t *data, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t varint_size(uint64_t data, size_t *out_size);
