@@ -24,6 +24,7 @@ int get_{{ lang.camel_to_proper_case(message.name) }}_size(const {{ message.name
         varint_size((uint64_t) {{ field.id }}, &f_id_size);
         field_size += f_id_size;
 
+        if (*size + field_size > SIZE_MAX) return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
         *size += field_size;
     }
 {%- endfor %}
