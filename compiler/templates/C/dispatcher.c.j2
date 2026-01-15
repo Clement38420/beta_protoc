@@ -1,6 +1,6 @@
 #include "dispatcher.h"
 
-dispatcher_err_t protoc_dispatch(uint8_t **buff, size_t *rem_buff) {
+int protoc_dispatch(uint8_t **buff, size_t *rem_buff) {
     uint8_t *p_buff = *buff;
 
     if (*rem_buff < 3) return DISPATCHER_ERR_INVALID_DATA;
