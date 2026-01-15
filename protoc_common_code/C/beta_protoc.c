@@ -77,90 +77,71 @@ beta_protoc_err_t varint_from_buff(uint64_t *data, uint8_t **buff, size_t *rem_b
     }
 }
 
-beta_protoc_err_t varint_size(uint64_t data, size_t *out_size) {
-    if (out_size == NULL) {
-        return BETA_PROTOC_ERR_INVALID_ARGS;
-    }
+size_t varint_size(uint64_t data) {
+    size_t out_size = 0;
 
-    *out_size = 0;
     do {
-        (*out_size)++;
+        (out_size)++;
         data >>= 7;
     } while (data != 0);
 
-    return BETA_PROTOC_SUCCESS;
+    return out_size;
 }
 
-beta_protoc_err_t int8_size(int8_t data, size_t *size) {
+size_t int8_size(int8_t data) {
     (void)data;
-    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
-    *size = 1;
-    return BETA_PROTOC_SUCCESS;
+    return 1;
 }
 
-beta_protoc_err_t int16_size(int16_t data, size_t *size) {
+size_t int16_size(int16_t data) {
     (void)data;
-    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
-    *size = 2;
-    return BETA_PROTOC_SUCCESS;
+    return 2;
 }
 
-beta_protoc_err_t uint8_size(uint8_t data, size_t *size) {
+size_t uint8_size(uint8_t data) {
     (void)data;
-    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
-    *size = 1;
-    return BETA_PROTOC_SUCCESS;
+    return 1;
 }
 
-beta_protoc_err_t uint16_size(uint16_t data, size_t *size) {
+size_t uint16_size(uint16_t data) {
     (void)data;
-    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
-    *size = 2;
-    return BETA_PROTOC_SUCCESS;
+    return 2;
 }
 
-beta_protoc_err_t int32_size(int32_t data, size_t *size) {
-    return varint_size(zigzag_encode_32(data), size);
+size_t int32_size(int32_t data) {
+    return varint_size(zigzag_encode_32(data));
 }
 
-beta_protoc_err_t int64_size(int64_t data, size_t *size) {
-    return varint_size(zigzag_encode_64(data), size);
+size_t int64_size(int64_t data) {
+    return varint_size(zigzag_encode_64(data));
 }
 
-beta_protoc_err_t uint32_size(uint32_t data, size_t *size) {
-    return varint_size(data, size);
+size_t uint32_size(uint32_t data) {
+    return varint_size(data);
 }
 
-beta_protoc_err_t uint64_size(uint64_t data, size_t *size) {
-    return varint_size(data, size);
+size_t uint64_size(uint64_t data) {
+    return varint_size(data);
 }
 
-beta_protoc_err_t float32_size(float data, size_t *size) {
+size_t float32_size(float data) {
     (void)data;
-    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
-    *size = 4;
-    return BETA_PROTOC_SUCCESS;
+    return 4;
 }
 
-beta_protoc_err_t float64_size(double data, size_t *size) {
+size_t float64_size(double data) {
     (void)data;
-    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
-    *size = 8;
-    return BETA_PROTOC_SUCCESS;
+    return 8;
 }
 
-beta_protoc_err_t char_size(char data, size_t *size) {
+size_t char_size(char data) {
     (void)data;
-    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
-    *size = 1;
-    return BETA_PROTOC_SUCCESS;
+    return 1;
 }
 
-beta_protoc_err_t bool_size(bool data, size_t *size) {
+size_t bool_size(bool data) {
     (void)data;
-    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
-    *size = 1;
-    return BETA_PROTOC_SUCCESS;
+    return 1;
 }
 
 static beta_protoc_err_t _write_unsigned(uint64_t data, size_t size, uint8_t **buff, size_t *rem_buff) {

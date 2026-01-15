@@ -17,19 +17,11 @@ int get_{{ lang.camel_to_proper_case(message.name) }}_size(const {{ message.name
         if (get_size_result != 0) return get_size_result;
         field_size += nested_size;
         {% else %}
-        size_t primitive_size = 0;
-        int get_size_result = {{ lang.camel_to_proper_case(field.type) }}_size(data->{{ field.name }}, &primitive_size); // Actual data
-        if (get_size_result != 0) return get_size_result;
-        field_size += primitive_size;
+        field_size += {{ lang.camel_to_proper_case(field.type) }}_size(data->{{ field.name }}); // Actual data
         {% endif %}
+        field_size += varint_size(field_size); // Length byte
 
-        size_t f_len_size = 0; // Length byte
-        varint_size(field_size, &f_len_size);
-        field_size += f_len_size;
-
-        size_t f_id_size = 0; // Field ID
-        varint_size((uint64_t) {{ field.id }}, &f_id_size);
-        field_size += f_id_size;
+        field_size += varint_size((uint64_t) {{ field.id }}); // Field ID
 
         if (*size + field_size > SIZE_MAX) return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
         *size += field_size;
@@ -65,11 +57,7 @@ int {{ lang.camel_to_proper_case(message.name) }}_to_buff(const {{ message.name 
 
         int result = {{ lang.camel_to_proper_case(field.type) }}_to_buff(&(data->{{ field.name }}), buff, rem_buff);
         {% else %}
-        size_t primitive_size = 0;
-        int get_size_result = {{ lang.camel_to_proper_case(field.type) }}_size(data->{{ field.name }}, &primitive_size);
-        if (get_size_result != 0) return get_size_result;
-
-        int len_varint_result = varint_to_buff(primitive_size, buff, rem_buff);
+        int len_varint_result = varint_to_buff({{ lang.camel_to_proper_case(field.type) }}_size(data->{{ field.name }}), buff, rem_buff);
         if (len_varint_result != 0) return len_varint_result;
 
         int result = {{ lang.camel_to_proper_case(field.type) }}_to_buff(data->{{ field.name }}, buff, rem_buff);
