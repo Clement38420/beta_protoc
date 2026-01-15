@@ -76,6 +76,10 @@ beta_protoc_err_t varint_size(uint64_t data, size_t *out_size) {
 }
 
 static beta_protoc_err_t _write_unsigned(uint64_t data, size_t size, uint8_t **buff, size_t *rem_buff) {
+    if (buff == NULL || *buff == NULL || rem_buff == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
+
     if (*rem_buff < size) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
 
     for (size_t i = 0; i < size; i++) {

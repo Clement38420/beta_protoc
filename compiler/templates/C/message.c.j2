@@ -1,6 +1,10 @@
 #include "{{ message.name }}.h"
 
 int get_{{ lang.camel_to_proper_case(message.name) }}_size(const {{ message.name }} *data, size_t *size) {
+    if (data == NULL || size == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
+
     *size = 0;
 {%- for field in message.fields %}
     {
@@ -33,6 +37,10 @@ int get_{{ lang.camel_to_proper_case(message.name) }}_size(const {{ message.name
 }
 
 int {{ lang.camel_to_proper_case(message.name) }}_to_buff(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
+    if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
+
 {%- for field in message.fields %}
     {
         int id_varint_result = varint_to_buff((uint64_t) {{ field.id }}, buff, rem_buff);
@@ -66,6 +74,10 @@ int {{ lang.camel_to_proper_case(message.name) }}_to_buff(const {{ message.name 
 }
 
 int {{ lang.camel_to_proper_case(message.name) }}_to_message(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
+    if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
+
     if (*rem_buff < 1) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
     **buff = (uint8_t) PROTOC_VERSION; // Protoc version
     (*buff)++;
@@ -91,6 +103,10 @@ int {{ lang.camel_to_proper_case(message.name) }}_to_message(const {{ message.na
 }
 
 int {{ lang.camel_to_proper_case(message.name) }}_from_buff({{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
+    if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
+
     while (*rem_buff > 0) {
         uint64_t field_id;
         int id_varint_result = varint_from_buff(&field_id, buff, rem_buff);
@@ -137,6 +153,10 @@ int {{ lang.camel_to_proper_case(message.name) }}_from_buff({{ message.name }} *
 }
 
 int {{ lang.camel_to_proper_case(message.name) }}_from_message({{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
+    if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
+
     if (*rem_buff < 1) return BETA_PROTOC_ERR_INVALID_DATA;
     if (**buff != PROTOC_VERSION) return BETA_PROTOC_ERR_INVALID_PROTOC_VERSION;
     (*buff)++;
