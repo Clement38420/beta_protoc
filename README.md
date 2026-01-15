@@ -221,6 +221,26 @@ The `PAYLOAD` consists of a sequence of fields, where each field is encoded as f
 | `FIELD_LEN`  | The length of the `FIELD_VALUE` in bytes.    | Varint (1-10 bytes) |
 | `FIELD_VALUE`| The binary value of the field.               | `FIELD_LEN` bytes   |
 
+### Data Type Encoding
+
+The way data types are serialized into `FIELD_VALUE` depends on their type:
+
+*   **Integers (8-bit and 16-bit):**
+    *   `int8`, `uint8`, `int16`, `uint16` are written directly in little-endian format. They are not converted to varints, as the overhead would negate any potential space savings. For 16-bit integers, the average size is roughly equivalent, and using varints would add computational cost for minimal gain.
+
+*   **Integers (32-bit and 64-bit):**
+    *   `uint32`, `uint64`: Encoded as standard **varints**. This is efficient for small, non-negative numbers.
+    *   `int32`, `int64`: Encoded using **ZigZag** encoding first, and then the result is encoded as a **varint**. ZigZag re-maps signed integers to unsigned integers so that small negative numbers (like -1) are encoded as small varints, which is highly efficient.
+
+*   **Floating-Point Numbers:**
+    *   `float32`, `float64`: Written directly in IEEE 754 binary format (little-endian).
+
+*   **Other Types:**
+    *   `bool`: Encoded as a single byte (`0x00` for `false`, `0x01` for `true`).
+    *   `char`: Encoded as a single byte.
+    *   `string`: The raw string bytes are written directly. The `FIELD_LEN` indicates the length.
+    *   **Nested Messages:** The field value is the serialized sub-message itself (including its own header and payload).
+
 ### ID and Size Limitations
 
 *   **Message ID:** The `MESSAGE_ID` is a 2-byte integer, allowing for up to **65,536 unique messages**.
