@@ -16,7 +16,7 @@ typedef enum {
     DISPATCHER_SUCCESS = 0, // Operation successful
     DISPATCHER_ERR_INVALID_DATA = -100,
     DISPATCHER_ERR_INVALID_PROTOC_VERSION = -101, // Mismatch on protoc versions
-    DISPATCHER_ERR_UNKNOWN_ID = -102 // Unknown message id
+    DISPATCHER_ERR_UNKNOWN_MESSAGE_ID = -102 // Unknown message id
 } dispatcher_err_t;
 
 {% for message in messages %}
