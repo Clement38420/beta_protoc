@@ -34,8 +34,8 @@ beta_protoc_err_t uint16_to_buff(uint16_t data, uint8_t **buff, size_t *rem_buff
 beta_protoc_err_t uint32_to_buff(uint32_t data, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t uint64_to_buff(uint64_t data, uint8_t **buff, size_t *rem_buff);
 
-beta_protoc_err_t float_to_buff(float data, uint8_t **buff, size_t *rem_buff);
-beta_protoc_err_t double_to_buff(double data, uint8_t **buff, size_t *rem_buff);
+beta_protoc_err_t float32_to_buff(float data, uint8_t **buff, size_t *rem_buff);
+beta_protoc_err_t float64_to_buff(double data, uint8_t **buff, size_t *rem_buff);
 
 beta_protoc_err_t string_to_buff(const char *data, size_t data_len, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t char_to_buff(char data, uint8_t **buff, size_t *rem_buff);
@@ -51,8 +51,8 @@ beta_protoc_err_t uint16_from_buff(uint16_t *data, uint8_t **buff, size_t *rem_b
 beta_protoc_err_t uint32_from_buff(uint32_t *data, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t uint64_from_buff(uint64_t *data, uint8_t **buff, size_t *rem_buff);
 
-beta_protoc_err_t float_from_buff(float *data, uint8_t **buff, size_t *rem_buff);
-beta_protoc_err_t double_from_buff(double *data, uint8_t **buff, size_t *rem_buff);
+beta_protoc_err_t float32_from_buff(float *data, uint8_t **buff, size_t *rem_buff);
+beta_protoc_err_t float64_from_buff(double *data, uint8_t **buff, size_t *rem_buff);
 
 beta_protoc_err_t bool_from_buff(bool *data, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t char_from_buff(char *data, uint8_t **buff, size_t *rem_buff);
