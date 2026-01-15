@@ -96,8 +96,13 @@ int {{ lang.camel_to_proper_case(message.name) }}_from_buff({{ message.name }} *
         if (id_varint_result != 0) return id_varint_result;
 
         size_t field_len;
-        int len_varint_result = varint_from_buff(&field_len, buff, rem_buff);
-        if (len_varint_result != 0) return len_varint_result;
+        {
+            uint64_t temp;
+            int varint_result = varint_from_buff(&temp, buff, rem_buff);
+            if (varint_result != 0) return varint_result;
+            if (temp > SIZE_MAX) return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
+            field_len = (size_t) temp;
+        }
 
         switch (field_id) {
         {%- for field in message.fields %}
@@ -142,8 +147,13 @@ int {{ lang.camel_to_proper_case(message.name) }}_from_message({{ message.name }
     *rem_buff -= 2;
 
     size_t payload_len;
-    int varint_result = varint_from_buff(&payload_len, buff, rem_buff);
-    if (varint_result != 0) return varint_result;
+    {
+        uint64_t temp;
+        int varint_result = varint_from_buff(&temp, buff, rem_buff);
+        if (varint_result != 0) return varint_result;
+        if (temp > SIZE_MAX) return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
+        payload_len = (size_t) temp;
+    }
 
     if (*rem_buff < payload_len) return BETA_PROTOC_ERR_INVALID_DATA;
     size_t rem_payload = payload_len;
