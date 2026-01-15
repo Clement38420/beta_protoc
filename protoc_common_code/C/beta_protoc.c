@@ -2,6 +2,22 @@
 
 #include <string.h>
 
+uint32_t zigzag_encode_32(int32_t value) {
+    return (uint32_t)((value << 1) ^ (value >> 31));
+}
+
+int32_t zigzag_decode_32(uint32_t value) {
+    return (int32_t)((value >> 1) ^ -(int32_t)(value & 1));
+}
+
+uint64_t zigzag_encode_64(int64_t value) {
+    return (uint64_t)((value << 1) ^ (value >> 63));
+}
+
+int64_t zigzag_decode_64(uint64_t value) {
+    return (int64_t)((value >> 1) ^ -(int64_t)(value & 1));
+}
+
 size_t safe_strlen(const char *str, size_t max_len) {
     size_t len = 0;
     while (len < max_len && str[len] != '\0') {
@@ -75,6 +91,78 @@ beta_protoc_err_t varint_size(uint64_t data, size_t *out_size) {
     return BETA_PROTOC_SUCCESS;
 }
 
+beta_protoc_err_t int8_size(int8_t data, size_t *size) {
+    (void)data;
+    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
+    *size = 1;
+    return BETA_PROTOC_SUCCESS;
+}
+
+beta_protoc_err_t int16_size(int16_t data, size_t *size) {
+    (void)data;
+    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
+    *size = 2;
+    return BETA_PROTOC_SUCCESS;
+}
+
+beta_protoc_err_t uint8_size(uint8_t data, size_t *size) {
+    (void)data;
+    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
+    *size = 1;
+    return BETA_PROTOC_SUCCESS;
+}
+
+beta_protoc_err_t uint16_size(uint16_t data, size_t *size) {
+    (void)data;
+    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
+    *size = 2;
+    return BETA_PROTOC_SUCCESS;
+}
+
+beta_protoc_err_t int32_size(int32_t data, size_t *size) {
+    return varint_size(zigzag_encode_32(data), size);
+}
+
+beta_protoc_err_t int64_size(int64_t data, size_t *size) {
+    return varint_size(zigzag_encode_64(data), size);
+}
+
+beta_protoc_err_t uint32_size(uint32_t data, size_t *size) {
+    return varint_size(data, size);
+}
+
+beta_protoc_err_t uint64_size(uint64_t data, size_t *size) {
+    return varint_size(data, size);
+}
+
+beta_protoc_err_t float32_size(float data, size_t *size) {
+    (void)data;
+    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
+    *size = 4;
+    return BETA_PROTOC_SUCCESS;
+}
+
+beta_protoc_err_t float64_size(double data, size_t *size) {
+    (void)data;
+    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
+    *size = 8;
+    return BETA_PROTOC_SUCCESS;
+}
+
+beta_protoc_err_t char_size(char data, size_t *size) {
+    (void)data;
+    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
+    *size = 1;
+    return BETA_PROTOC_SUCCESS;
+}
+
+beta_protoc_err_t bool_size(bool data, size_t *size) {
+    (void)data;
+    if (size == NULL) return BETA_PROTOC_ERR_INVALID_ARGS;
+    *size = 1;
+    return BETA_PROTOC_SUCCESS;
+}
+
 static beta_protoc_err_t _write_unsigned(uint64_t data, size_t size, uint8_t **buff, size_t *rem_buff) {
     if (buff == NULL || *buff == NULL || rem_buff == NULL) {
         return BETA_PROTOC_ERR_INVALID_ARGS;
@@ -92,19 +180,21 @@ static beta_protoc_err_t _write_unsigned(uint64_t data, size_t size, uint8_t **b
 }
 
 beta_protoc_err_t int8_to_buff(int8_t data, uint8_t **buff, size_t *rem_buff) {
-    return _write_unsigned((uint8_t)data, 1, buff, rem_buff);
+    return _write_unsigned(data, 1, buff, rem_buff);
 }
 
 beta_protoc_err_t int16_to_buff(int16_t data, uint8_t **buff, size_t *rem_buff) {
-    return _write_unsigned((uint16_t)data, 2, buff, rem_buff);
+    return _write_unsigned(data, 2, buff, rem_buff);
 }
 
 beta_protoc_err_t int32_to_buff(int32_t data, uint8_t **buff, size_t *rem_buff) {
-    return _write_unsigned((uint32_t)data, 4, buff, rem_buff);
+    uint32_t temp = zigzag_encode_32(data);
+    return varint_to_buff(temp, buff, rem_buff);
 }
 
 beta_protoc_err_t int64_to_buff(int64_t data, uint8_t **buff, size_t *rem_buff) {
-    return _write_unsigned((uint64_t)data, 8, buff, rem_buff);
+    uint64_t temp = zigzag_encode_64(data);
+    return varint_to_buff(temp, buff, rem_buff);
 }
 
 beta_protoc_err_t uint8_to_buff(uint8_t data, uint8_t **buff, size_t *rem_buff) {
@@ -116,11 +206,11 @@ beta_protoc_err_t uint16_to_buff(uint16_t data, uint8_t **buff, size_t *rem_buff
 }
 
 beta_protoc_err_t uint32_to_buff(uint32_t data, uint8_t **buff, size_t *rem_buff) {
-    return _write_unsigned(data, 4, buff, rem_buff);
+    return varint_to_buff(data, buff, rem_buff);
 }
 
 beta_protoc_err_t uint64_to_buff(uint64_t data, uint8_t **buff, size_t *rem_buff) {
-    return _write_unsigned(data, 8, buff, rem_buff);
+    return varint_to_buff(data, buff, rem_buff);
 }
 
 beta_protoc_err_t float32_to_buff(float data, uint8_t **buff, size_t *rem_buff) {
@@ -190,15 +280,15 @@ beta_protoc_err_t int16_from_buff(int16_t *data, uint8_t **buff, size_t *rem_buf
 
 beta_protoc_err_t int32_from_buff(int32_t *data, uint8_t **buff, size_t *rem_buff) {
     uint64_t temp;
-    beta_protoc_err_t err = _read_unsigned(&temp, 4, buff, rem_buff);
-    if (err == BETA_PROTOC_SUCCESS) *data = (int32_t)temp;
+    beta_protoc_err_t err = varint_from_buff(&temp, buff, rem_buff);
+    if (err == BETA_PROTOC_SUCCESS) *data = zigzag_decode_32(temp);
     return err;
 }
 
 beta_protoc_err_t int64_from_buff(int64_t *data, uint8_t **buff, size_t *rem_buff) {
     uint64_t temp;
-    beta_protoc_err_t err = _read_unsigned(&temp, 8, buff, rem_buff);
-    if (err == BETA_PROTOC_SUCCESS) *data = (int64_t)temp;
+    beta_protoc_err_t err = varint_from_buff(&temp, buff, rem_buff);
+    if (err == BETA_PROTOC_SUCCESS) *data = zigzag_decode_64(temp);
     return err;
 }
 
@@ -218,13 +308,13 @@ beta_protoc_err_t uint16_from_buff(uint16_t *data, uint8_t **buff, size_t *rem_b
 
 beta_protoc_err_t uint32_from_buff(uint32_t *data, uint8_t **buff, size_t *rem_buff) {
     uint64_t temp;
-    beta_protoc_err_t err = _read_unsigned(&temp, 4, buff, rem_buff);
+    beta_protoc_err_t err = varint_from_buff(&temp, buff, rem_buff);
     if (err == BETA_PROTOC_SUCCESS) *data = (uint32_t)temp;
     return err;
 }
 
 beta_protoc_err_t uint64_from_buff(uint64_t *data, uint8_t **buff, size_t *rem_buff) {
-    return _read_unsigned(data, 8, buff, rem_buff);
+    return varint_from_buff(data, buff, rem_buff);
 }
 
 beta_protoc_err_t float32_from_buff(float *data, uint8_t **buff, size_t *rem_buff) {

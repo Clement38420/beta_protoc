@@ -21,7 +21,27 @@ typedef enum {
     BETA_PROTOC_ERR_INVALID_DATA = -6, // General data error
 } beta_protoc_err_t;
 
+uint32_t zigzag_encode_32(int32_t value);
+int32_t zigzag_decode_32(uint32_t value);
+uint64_t zigzag_encode_64(int64_t value);
+int64_t zigzag_decode_64(uint64_t value);
+
 size_t safe_strlen(const char *str, size_t max_len);
+
+beta_protoc_err_t int8_size(int8_t data, size_t *size);
+beta_protoc_err_t int16_size(int16_t data, size_t *size);
+beta_protoc_err_t uint8_size(uint8_t data, size_t *size);
+beta_protoc_err_t uint16_size(uint16_t data, size_t *size);
+beta_protoc_err_t char_size(char data, size_t *size);
+beta_protoc_err_t bool_size(bool data, size_t *size);
+
+beta_protoc_err_t int32_size(int32_t data, size_t *size);
+beta_protoc_err_t int64_size(int64_t data, size_t *size);
+beta_protoc_err_t uint32_size(uint32_t data, size_t *size);
+beta_protoc_err_t uint64_size(uint64_t data, size_t *size);
+
+beta_protoc_err_t float32_size(float data, size_t *size);
+beta_protoc_err_t float64_size(double data, size_t *size);
 
 beta_protoc_err_t varint_to_buff(uint64_t data, uint8_t **buff, size_t *rem_buff);
 beta_protoc_err_t varint_from_buff(uint64_t *data, uint8_t **buff, size_t *rem_buff);
