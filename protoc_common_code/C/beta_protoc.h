@@ -13,8 +13,8 @@ extern "C" {
 
 typedef enum {
     BETA_PROTOC_SUCCESS = 0,
-    BETA_PROTOC_ERR_INVALID_ARGS = -1,              // NULL pointers passed as parameters
-    BETA_PROTOC_ERR_BUFFER_TOO_SMALL = -2, // Output or work buffer too small
+    BETA_PROTOC_ERR_INVALID_ARGS = -1, // NULL pointers passed as parameters
+    BETA_PROTOC_ERR_BUFFER_TOO_SMALL = -2, // Output buffer too small
     BETA_PROTOC_ERR_INVALID_ID = -3, // Message ID does not match the struct
     BETA_PROTOC_ERR_INVALID_PROTOC_VERSION = -4, // Protoc version does not match
     BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT = -5, // Value exceeds architecture limits (e.g., varint too large for 32 bits size_t)

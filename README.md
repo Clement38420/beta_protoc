@@ -275,6 +275,33 @@ For each message, the following functions are generated to facilitate serializat
 6.  **`int <MessageName>_from_message(<MessageName> *data, uint8_t **buff, size_t *rem_buff)`**
     This is the main function to use for deserialization. It takes a buffer containing a binary message, validates the header, and deserializes the payload into the provided struct.
 
+### Error Codes
+
+All serialization and deserialization functions return an integer value of type `beta_protoc_err_t` to indicate the outcome of the operation. A return value of `0` (`BETA_PROTOC_SUCCESS`) means the operation was successful. Any negative value indicates an error.
+
+Here is a list of possible error codes:
+
+| Code | Name | Description |
+| --- | --- | --- |
+| `0` | `BETA_PROTOC_SUCCESS` | The operation completed successfully. |
+| `-1` | `BETA_PROTOC_ERR_INVALID_ARGS` | One or more arguments (e.g., a null pointer) passed to the function were invalid. |
+| `-2` | `BETA_PROTOC_ERR_BUFFER_TOO_SMALL` | The provided buffer was not large enough to complete the serialization or deserialization. |
+| `-3` | `BETA_PROTOC_ERR_INVALID_ID` | The message ID in the buffer does not match the expected ID for the message type. |
+| `-4` | `BETA_PROTOC_ERR_INVALID_PROTOC_VERSION` | The protocol version in the buffer does not match the version supported by the generated code. |
+| `-5` | `BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT` | A value (e.g., a varint) is too large to be represented on the target architecture. |
+| `-6` | `BETA_PROTOC_ERR_INVALID_DATA` | The data in the buffer is corrupted or does not follow the expected format. |
+| `-7` | `BETA_PROTOC_ERR_ARRAY_SIZE_EXCEEDED` | An attempt was made to write more elements into a fixed-size array than its capacity allows. |
+| `-8` | `BETA_PROTOC_ERR_NULL_ARRAY_POINTER` | A pointer to a dynamic array was null when it was expected to be allocated. |
+
+The dispatcher also has its own set of error codes, of type `dispatcher_err_t`:
+
+| Code | Name | Description |
+| --- | --- | --- |
+| `0` | `DISPATCHER_SUCCESS` | The message was successfully dispatched. |
+| `-100` | `DISPATCHER_ERR_INVALID_DATA` | The input buffer contains invalid or corrupted data. |
+| `-101` | `DISPATCHER_ERR_INVALID_PROTOC_VERSION` | The protocol version of the message is not supported by the dispatcher. |
+| `-102` | `DISPATCHER_ERR_UNKNOWN_MESSAGE_ID` | The message ID is not recognized by the dispatcher. |
+
 ### Complete Example
 
 Here is an example demonstrating serialization and deserialization using the dispatcher.
@@ -369,5 +396,3 @@ Create a directory with the **exact name** of the language in `compiler/template
 Add the Jinja2 templates corresponding to the extensions defined in the `Language` object:
 
 * `message.py.j2` (if `src_ext="py"`)
-
-The compiler will automatically locate and use these templates during generation.
