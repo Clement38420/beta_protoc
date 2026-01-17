@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "beta_protoc.h"
 
+// Include all message headers
 {%- for message in messages %}
 #include "{{ message.name }}.h"
 {%- endfor %}
@@ -12,27 +13,37 @@
 extern "C" {
 #endif
 
+// Error codes for the dispatcher
 typedef enum {
-    DISPATCHER_SUCCESS = 0, // Operation successful
+    DISPATCHER_SUCCESS = 0,
     DISPATCHER_ERR_INVALID_DATA = -100,
-    DISPATCHER_ERR_INVALID_PROTOC_VERSION = -101, // Mismatch on protoc versions
-    DISPATCHER_ERR_UNKNOWN_MESSAGE_ID = -102 // Unknown message id
+    DISPATCHER_ERR_INVALID_PROTOC_VERSION = -101,
+    DISPATCHER_ERR_UNKNOWN_MESSAGE_ID = -102,
 } dispatcher_err_t;
 
-{% for message in messages %}
+// Weak callback function declarations to be implemented by the user
+{%- for message in messages %}
 /**
  * @brief Weak callback function to be implemented by the user.
- *        This function is called by the dispatcher when a {{ message.name }} message is successfully received and deserialized.
+ *
+ * This function is called by the dispatcher when a {{ message.name }} message is
+ * successfully received and deserialized.
+ *
  * @param msg Pointer to the deserialized {{ message.name }} message struct.
  */
-void on_{{ lang.camel_to_proper_case(message.name) }}_received({{ message.name }} *msg);{% endfor %}
+void on_{{ lang.camel_to_proper_case(message.name) }}_received({{ message.name }} *msg) __attribute__((weak));
+{%- endfor %}
 
 /**
  * @brief Dispatches an incoming binary message.
- *        It reads the message header, finds the corresponding message type,
- *        deserializes it, and calls the appropriate `on_<MessageName>_received` callback.
- * @param buff Double pointer to the buffer containing the binary message. The pointer is advanced past the processed message.
- * @param rem_buff Pointer to the remaining buffer size. The value is decremented by the size of the processed message.
+ *
+ * It reads the message header, finds the corresponding message type,
+ * deserializes it, and calls the appropriate `on_<MessageName>_received` callback if it exists.
+ *
+ * @param buff Double pointer to the buffer containing the binary message.
+ *             The pointer is advanced past the processed message.
+ * @param rem_buff Pointer to the remaining buffer size.
+ *                 The value is decremented by the size of the processed message.
  * @return DISPATCHER_SUCCESS on success, or an error code on failure.
  */
 int protoc_dispatch(uint8_t **buff, size_t *rem_buff);

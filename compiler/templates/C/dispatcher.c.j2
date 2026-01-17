@@ -3,21 +3,33 @@
 int protoc_dispatch(uint8_t **buff, size_t *rem_buff) {
     uint8_t *p_buff = *buff;
 
-    if (*rem_buff < 3) return DISPATCHER_ERR_INVALID_DATA;
-    if (p_buff[0] != PROTOC_VERSION) return DISPATCHER_ERR_INVALID_PROTOC_VERSION;
+    // Check for minimum buffer size (version + message ID)
+    if (*rem_buff < 3) {
+        return DISPATCHER_ERR_INVALID_DATA;
+    }
+    // Check protocol version
+    if (p_buff[0] != PROTOC_VERSION) {
+        return DISPATCHER_ERR_INVALID_PROTOC_VERSION;
+    }
 
-    switch(((uint16_t) p_buff[2] << 8) | (uint16_t) p_buff[1]) {
-    {% for message in messages %}
+    // Dispatch based on message ID (little-endian)
+    switch (((uint16_t) p_buff[2] << 8) | (uint16_t) p_buff[1]) {
+        {%- for message in messages %}
         case {{ message.id }}: {
             {{ message.name }} msg;
             int result = {{ lang.camel_to_proper_case(message.name) }}_from_message(&msg, buff, rem_buff);
-            if (result != 0) return result;
+            if (result != 0) {
+                return result;
+            }
 
-            on_{{ lang.camel_to_proper_case(message.name) }}_received(&msg);
+            // Call the user-implemented callback for the received message
+            if (on_{{ lang.camel_to_proper_case(message.name) }}_received != NULL) {
+                on_{{ lang.camel_to_proper_case(message.name) }}_received(&msg);
+            }
             return DISPATCHER_SUCCESS;
         }
-    {% endfor %}
-    default:
-        return DISPATCHER_ERR_UNKNOWN_MESSAGE_ID;
+        {%- endfor %}
+        default:
+            return DISPATCHER_ERR_UNKNOWN_MESSAGE_ID;
     }
 }
