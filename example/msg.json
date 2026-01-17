@@ -12,7 +12,7 @@
         {
           "name": "name",
           "id": 1,
-          "type": "string[32]"
+          "type": "char[32]"
         },
         {
           "name": "value",
@@ -33,7 +33,7 @@
         {
           "name": "unit",
           "id": 1,
-          "type": "string[32]"
+          "type": "char[32]"
         }
       ]
     }

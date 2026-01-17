@@ -1,173 +1,368 @@
 #include "SensorData.h"
 
-int get_sensor_data_size(const SensorData *data, size_t *size) {
-    *size = 0;
-    {
-        size_t field_size = 0;
-        field_size = sizeof(uint8_t); // Field ID
-        field_size += sizeof(uint8_t); // Length byte
-        
-        field_size += sizeof(uint32_t); // Actual data
-        
-        *size += field_size;
+int32_t get_sensor_data_size(const SensorData *data) {
+    if (data == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
     }
+
+    int32_t size = 0;
+    // Field: id
     {
         size_t field_size = 0;
-        field_size = sizeof(uint8_t); // Field ID
-        field_size += sizeof(uint8_t); // Length byte
         
-        field_size += strlen(data->name); // Actual string data
-        
-        *size += field_size;
+        // Primitive type size calculation
+        field_size += uint32_size(data->id);
+
+        // Add size of field length (varint) and field ID (varint)
+        field_size += varint_size(field_size);
+        field_size += varint_size((uint64_t) 0);
+        if (size + field_size > SIZE_MAX) {
+            return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
+        }
+        size += field_size;
     }
+    // Field: name
     {
         size_t field_size = 0;
-        field_size = sizeof(uint8_t); // Field ID
-        field_size += sizeof(uint8_t); // Length byte
         
-        size_t nested_size = 0;
-        int get_size_result = get_value_size(&(data->value), &nested_size); // Nested message size
-        if (get_size_result != 0) return get_size_result;
+        for (size_t i = 0; i < data->name_count; i++) {
+        
+        // Special case for char type to avoid counting after null-terminator
+        if (data->name[i] == '\0') {
+            break;
+        }
+        
+        // Primitive type size calculation
+        field_size += char_size(data->name[i]);
+        }
+
+        // Add size of field length (varint) and field ID (varint)
+        field_size += varint_size(field_size);
+        field_size += varint_size((uint64_t) 1);
+        if (size + field_size > SIZE_MAX) {
+            return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
+        }
+        size += field_size;
+    }
+    // Field: value
+    {
+        size_t field_size = 0;
+        
+        
+        // Nested message size calculation
+        int32_t nested_size = get_value_size(&(data->value));
+        if (nested_size < 0) {
+            return nested_size;
+        }
         field_size += nested_size;
         
-        *size += field_size;
-    }
 
-    return 0;
+        // Add size of field length (varint) and field ID (varint)
+        field_size += varint_size(field_size);
+        field_size += varint_size((uint64_t) 2);
+        if (size + field_size > SIZE_MAX) {
+            return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
+        }
+        size += field_size;
+    }
+    return size;
 }
 
-int sensor_data_to_buff(const SensorData *data, uint8_t **buff, size_t *rem_buff) {
-    {
-        if (*rem_buff < 2) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
-        **buff = (uint8_t)0; // Field ID
-        (*buff)++;
-        
-        **buff = (uint8_t)sizeof(uint32_t); // Length byte
-        (*buff)++;
-        *rem_buff -= 2;
-
-        int result = uint32_to_buff(data->id, buff, rem_buff);
-        
-        if (result != 0) return result;
+beta_protoc_err_t sensor_data_to_buff(const SensorData *data, uint8_t **buff, size_t *rem_buff) {
+    if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
     }
+    // Field: id
     {
-        if (*rem_buff < 2) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
-        **buff = (uint8_t)1; // Field ID
-        (*buff)++;
+        // Serialize field ID
+        beta_protoc_err_t id_varint_err = varint_to_buff((uint64_t) 0, buff, rem_buff);
+        if (id_varint_err != 0) {
+            return id_varint_err;
+        }
         
-        **buff = (uint8_t)strlen(data->name); // Length byte
-        (*buff)++;
-        *rem_buff -= 2;
+        beta_protoc_err_t len_varint_err = varint_to_buff(uint32_size(data->id), buff, rem_buff);
+        if (len_varint_err != 0) {
+            return len_varint_err;
+        }
 
-        int result = string_to_buff(data->name, strlen(data->name), buff, rem_buff);
-        
-        if (result != 0) return result;
+        // Serialize value
+        beta_protoc_err_t field_err = uint32_to_buff(data->id, buff, rem_buff);
+        if (field_err != 0) {
+            return field_err;
+        }
     }
+    // Field: name
     {
-        if (*rem_buff < 2) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
-        **buff = (uint8_t)2; // Field ID
-        (*buff)++;
+        if (data->name_count > 32) {
+            return BETA_PROTOC_ERR_ARRAY_SIZE_EXCEEDED;
+        }
+        // Serialize field ID
+        beta_protoc_err_t id_varint_err = varint_to_buff((uint64_t) 1, buff, rem_buff);
+        if (id_varint_err != 0) {
+            return id_varint_err;
+        }
         
-        size_t nested_size = 0;
-        int get_size_result = get_value_size(&(data->value), &nested_size);
-        if (get_size_result != 0) return get_size_result;
-        **buff = (uint8_t)nested_size; // Length byte
-        (*buff)++;
-        *rem_buff -= 2;
+        // Serialize field length (sum of all elements size for primitive arrays)
+        size_t array_size = 0;
+        for (size_t i = 0; i < data->name_count; i++) {
+            
+            // Special case for char type to avoid counting after null-terminator
+            if (data->name[i] == '\0') {
+                break;
+            }
+            
+            array_size += char_size(data->name[i]);
+        }
+        beta_protoc_err_t len_varint_err = varint_to_buff(array_size, buff, rem_buff);
+        if (len_varint_err != 0) {
+            return len_varint_err;
+        }
 
-        int result = value_to_buff(&(data->value), buff, rem_buff);
+        for (size_t i = 0; i < data->name_count; i++) {
+
         
-        if (result != 0) return result;
+        // Special case for char type to avoid writing after null-terminator
+        if (data->name[i] == '\0') {
+            break;
+        }
+        
+        
+
+        // Serialize value
+        beta_protoc_err_t field_err = char_to_buff(data->name[i], buff, rem_buff);
+        if (field_err != 0) {
+            return field_err;
+        }
+        }
     }
+    // Field: value
+    {
+        // Serialize field ID
+        beta_protoc_err_t id_varint_err = varint_to_buff((uint64_t) 2, buff, rem_buff);
+        if (id_varint_err != 0) {
+            return id_varint_err;
+        }
+        
+        // Serialize field length
+        int32_t nested_size = get_value_size(&(data->value));
+        if (nested_size < 0) {
+            return nested_size;
+        }
+        beta_protoc_err_t len_varint_err = varint_to_buff(nested_size, buff, rem_buff);
+        if (len_varint_err != 0) {
+            return len_varint_err;
+        }
 
-    return 0;
+        // Serialize value
+        beta_protoc_err_t field_err = value_to_buff(&(data->value), buff, rem_buff);
+        if (field_err != 0) {
+            return field_err;
+        }
+    }
+    return BETA_PROTOC_SUCCESS;
 }
 
-int sensor_data_to_message(const SensorData *data, uint8_t **buff, size_t *rem_buff) {
-    if (*rem_buff < MESSAGE_HEADER_SIZE) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
-    **buff = (uint8_t)PROTOC_VERSION; // Protoc version
+beta_protoc_err_t sensor_data_to_message(const SensorData *data, uint8_t **buff, size_t *rem_buff) {
+    if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
+
+    // Write protocol version
+    if (*rem_buff < 1) {
+        return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
+    }
+    **buff = (uint8_t) PROTOC_VERSION;
     (*buff)++;
-    **buff = (uint8_t)0; // Message ID
+    (*rem_buff)--;
+
+    // Write message ID
+    if (*rem_buff < 2) {
+        return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
+    }
+    **buff = (uint16_t) 0;
     (*buff)++;
-    uint8_t *p_payload_len = *buff; // Pointer to message length byte
-    **buff = 0;
+    **buff = (((uint16_t) 0 >> 8) & 0x00FF);
     (*buff)++;
-    *rem_buff -= MESSAGE_HEADER_SIZE;
+    *rem_buff -= 2;
 
-    size_t initial_rem_buff = *rem_buff;
+    // Write payload size
+    int32_t payload_size = get_sensor_data_size(data);
+    if (payload_size < 0) {
+        return payload_size;
+    }
+    beta_protoc_err_t len_varint_err = varint_to_buff(payload_size, buff, rem_buff);
+    if (len_varint_err != 0) {
+        return len_varint_err;
+    }
 
-    int result = sensor_data_to_buff(data, buff, rem_buff);
-    if (result != 0) return result;
+    // Write payload
+    beta_protoc_err_t msg_err = sensor_data_to_buff(data, buff, rem_buff);
+    if (msg_err != 0) {
+        return msg_err;
+    }
 
-    *p_payload_len = initial_rem_buff - *rem_buff;
-
-    return 0;
+    return BETA_PROTOC_SUCCESS;
 }
 
-int sensor_data_from_buff(SensorData *data, uint8_t **buff, size_t *rem_buff) {
+beta_protoc_err_t sensor_data_from_buff(SensorData *data, uint8_t **buff, size_t *rem_buff) {
+    if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
+
+    // Initialize array counts
+    data->name_count = 0;
+
     while (*rem_buff > 0) {
-        if (*rem_buff < 2) return BETA_PROTOC_ERR_INVALID_DATA;
-        uint8_t field_id = **buff;
-        (*buff)++;
-        size_t field_len = **buff;
-        (*buff)++;
-        *rem_buff -= 2;
+        // Deserialize field ID
+        uint64_t field_id;
+        beta_protoc_err_t id_varint_err = varint_from_buff(&field_id, buff, rem_buff);
+        if (id_varint_err != 0) {
+            return id_varint_err;
+        }
+
+        // Deserialize field length
+        size_t field_len;
+        {
+            uint64_t tmp;
+            beta_protoc_err_t len_varint_err = varint_from_buff(&tmp, buff, rem_buff);
+            if (len_varint_err != 0) {
+                return len_varint_err;
+            }
+            if (tmp > SIZE_MAX) {
+                return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
+            }
+            field_len = (size_t) tmp;
+        }
 
         switch (field_id) {
-            case 0:
-            {
-                
-                int result = uint32_from_buff(&(data->id), buff, rem_buff);
-                
-                if (result != 0) return result;
-                break;
-            }
-            case 1:
-            {
-                
-                if (field_len >= 32) return BETA_PROTOC_ERR_INVALID_DATA;
-                int result = string_from_buff(data->name, field_len, buff, rem_buff);
-                data->name[field_len] = '\0';
-                
-                if (result != 0) return result;
-                break;
-            }
-            case 2:
-            {
-                
-                int result = value_from_buff(&(data->value), buff, rem_buff);
-                
-                if (result != 0) return result;
-                break;
-            }
+            // Field: id
+            case 0: {
+                uint8_t *field_start_buff = *buff;
 
+                // Deserialize field value
+                
+                beta_protoc_err_t field_err = uint32_from_buff(&(data->id), buff, rem_buff);
+                if (field_err != 0) {
+                    return field_err;
+                }
+
+                // Check if the correct number of bytes were read
+                if ((size_t)(*buff - field_start_buff) != field_len) {
+                    return BETA_PROTOC_ERR_INVALID_DATA;
+                }
+
+                break;
+            }
+            // Field: name
+            case 1: {
+                uint8_t *field_start_buff = *buff;
+
+                // Deserialize field value
+                
+                while (*buff - field_start_buff < field_len) {
+                    beta_protoc_err_t field_err = char_from_buff(&(data->name[data->name_count]), buff, rem_buff);
+                    if (field_err != 0) {
+                        return field_err;
+                    }
+                    data->name_count++;
+                    if (data->name_count > 32) {
+                        return BETA_PROTOC_ERR_ARRAY_SIZE_EXCEEDED;
+                    }
+                }
+
+                // Check if the correct number of bytes were read
+                if ((size_t)(*buff - field_start_buff) != field_len) {
+                    return BETA_PROTOC_ERR_INVALID_DATA;
+                }
+
+                break;
+            }
+            // Field: value
+            case 2: {
+                uint8_t *field_start_buff = *buff;
+
+                // Deserialize field value
+                size_t rem_nested = field_len;
+                beta_protoc_err_t field_err = value_from_buff(&(data->value), buff, &rem_nested);
+                *rem_buff -= field_len;
+                if (field_err != 0) {
+                    return field_err;
+                }
+
+                // Check if the correct number of bytes were read
+                if ((size_t)(*buff - field_start_buff) != field_len) {
+                    return BETA_PROTOC_ERR_INVALID_DATA;
+                }
+
+                break;
+            }
             default:
-                if (field_len > *rem_buff) return BETA_PROTOC_ERR_INVALID_DATA;
+                // Skip unknown fields
+                if (field_len > *rem_buff) {
+                    return BETA_PROTOC_ERR_INVALID_DATA;
+                }
                 (*buff) += field_len;
                 *rem_buff -= field_len;
         }
     }
 
-    return 0;
+    // Null-terminate strings
+    data->name[data->name_count] = '\0';
+
+    return BETA_PROTOC_SUCCESS;
 }
 
-int sensor_data_from_message(SensorData *data, uint8_t **buff, size_t *rem_buff) {
-    if (*rem_buff < MESSAGE_HEADER_SIZE) return BETA_PROTOC_ERR_INVALID_DATA;
-    if (**buff != PROTOC_VERSION) return BETA_PROTOC_ERR_INVALID_PROTOC_VERSION;
-    (*buff)++;
-    if (**buff != 0) return BETA_PROTOC_ERR_INVALID_ID;
-    (*buff)++;
-    size_t payload_len = **buff;
-    (*buff)++;
-    *rem_buff -= MESSAGE_HEADER_SIZE;
+beta_protoc_err_t sensor_data_from_message(SensorData *data, uint8_t **buff, size_t *rem_buff) {
+    if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
+        return BETA_PROTOC_ERR_INVALID_ARGS;
+    }
 
-    if (*rem_buff < payload_len) return BETA_PROTOC_ERR_INVALID_DATA;
+    // Read and check protocol version
+    if (*rem_buff < 1) {
+        return BETA_PROTOC_ERR_INVALID_DATA;
+    }
+    if (**buff != PROTOC_VERSION) {
+        return BETA_PROTOC_ERR_INVALID_PROTOC_VERSION;
+    }
+    (*buff)++;
+    (*rem_buff)--;
+
+    // Read and check message ID
+    if (*rem_buff < 2) {
+        return BETA_PROTOC_ERR_INVALID_DATA;
+    }
+    if ((((uint16_t)(*(*buff + 1)) << 8) | (uint16_t)(**buff)) != 0) {
+        return BETA_PROTOC_ERR_INVALID_ID;
+    }
+    *buff += 2;
+    *rem_buff -= 2;
+
+    // Read payload length
+    size_t payload_len;
+    {
+        uint64_t tmp;
+        beta_protoc_err_t len_varint_err = varint_from_buff(&tmp, buff, rem_buff);
+        if (len_varint_err != 0) {
+            return len_varint_err;
+        }
+        if (tmp > SIZE_MAX) {
+            return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
+        }
+        payload_len = (size_t) tmp;
+    }
+
+    if (*rem_buff < payload_len) {
+        return BETA_PROTOC_ERR_INVALID_DATA;
+    }
     size_t rem_payload = payload_len;
 
-    int result = sensor_data_from_buff(data, buff, &rem_payload);
-    if (result != 0) return result;
+    // Read payload
+    beta_protoc_err_t msg_err = sensor_data_from_buff(data, buff, &rem_payload);
+    if (msg_err != 0) {
+        return msg_err;
+    }
 
     *rem_buff -= payload_len;
 
-    return 0;
+    return BETA_PROTOC_SUCCESS;
 }
