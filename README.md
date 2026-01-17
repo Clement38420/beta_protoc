@@ -4,10 +4,13 @@
 
 ## Features
 
-* **Simple Definition:** Messages are described in a clear, human-readable JSON format.
-* **Strong Validation:** Types, names, and structures are rigorously validated before code generation to prevent runtime errors.
-* **Multi-language Support:** The tool currently supports C and is designed with a modular architecture to easily add other languages.
-* **Dependency Management:** Automatically detects when a message uses another message as a field type and handles the necessary imports or includes.
+*   **Optimized Binary Protocol:** Employs Varint and ZigZag encoding for efficient, language-agnostic serialization.
+*   **Versatile Array Support:** Natively handles static and dynamic arrays with optimized serialization for primitive types.
+*   **JSON Schema Definition:** Uses a clear, human-readable JSON format for defining message structures.
+*   **Robust Compile-Time Validation:** Rigorously validates schemas before code generation to prevent runtime errors.
+*   **Automatic Dependency Resolution:** Automatically manages dependencies between nested messages.
+*   **Modular & Extensible:** A template-based architecture (Jinja2) allows for easy addition of new target languages.
+*   **Optional C Dispatcher:** Generates a dispatcher in C for simplified message routing and handling.
 
 ## Installation
 
@@ -77,14 +80,18 @@ The input file must follow a specific JSON structure defining a list of messages
 
 You can use the following primitive types or the name of another message defined in your JSON file.
 
-| Category | Types |
-| --- | --- |
+| Category              | Types |
+|-----------------------| --- |
 | **Unsigned Integers** | `uint8`, `uint16`, `uint32`, `uint64` |
-| **Signed Integers** | `int8`, `int16`, `int32`, `int64` |
-| **Floating Point** | `float32`, `float64` |
-| **Text / Logic** | `char`, `string[SIZE]`, `bool` |
+| **Signed Integers**   | `int8`, `int16`, `int32`, `int64` |
+| **Floating Point**    | `float32`, `float64` |
+| **Other**             | `char`, `bool` |
 
-`SIZE` must be an integer specifying the maximum length of the string.
+Additionally, both **static** and **dynamic** arrays are supported for any data type (including nested messages).
+
+*   **Static array:** `type[SIZE]`, for example `int32[10]` for an array of 10 integers.
+*   **Dynamic array:** `type[]`, for example `float32[]`.
+
 
 ### Key Considerations
 
@@ -93,107 +100,13 @@ You can use the following primitive types or the name of another message defined
 3. **Dependencies:** If message `A` is used as a field type inside message `B`, message `A` must be defined within the `messages` list. The compiler will automatically generate the required dependencies (e.g., `#include "A.h"`).
 4. **Order:** The order in which messages are defined in the JSON file does not matter; the compiler resolves dependencies automatically.
 
-## Supported Languages
+## Binary Protocol Specification
 
-Currently, the compiler supports:
-
-* **C** (`.c`, `.h`): Generates structs and dependent message headers.
-
-## Adding a New Language
-
-The architecture is modular. To add support for a new language (e.g., Python, C++), follow these two steps:
-
-### 1. Define the Language
-
-Open `compiler/core/language.py` and add an entry to the `SUPPORTED_LANGUAGES` list. You must provide:
-- The mapping between internal types (`DataType`) and the target language types.
-- The naming convention (`case`) to use for generating names (e.g., function names like `read_<message_name>`).
-
-```python
-# Example for Python
-from compiler.core.language import Language, Case
-from compiler.common.data_types import DataType
-
-Language(
-    name="Python",
-    case=Case.SNAKE,  # Use snake_case for names (e.g., my_function)
-    src_ext="py",
-    header_ext=None,  # Python does not use header files
-    types_mapping={
-        DataType.UINT8: "int",
-        DataType.STRING: "str",
-        # ... define mappings for all DataType enum members
-    }
-)
-```
-
-### 2. Create Templates
-
-Create a directory with the **exact name** of the language in `compiler/templates/` (e.g., `compiler/templates/Python/`).
-Add the Jinja2 templates corresponding to the extensions defined in the `Language` object:
-
-* `message.py.j2` (if `src_ext="py"`)
-
-The compiler will automatically locate and use these templates during generation.
-
-## Example
-
-**Input (`msg.json`):**
-
-```json
-{
-  "messages": [
-    {
-      "name": "Position",
-      "id": 1,
-      "fields": [
-        { "name": "x", "id": 1, "type": "float32" },
-        { "name": "y", "id": 2, "type": "float32" }
-      ]
-    },
-    {
-      "name": "RobotStatus",
-      "id": 2,
-      "fields": [
-        { "name": "id", "id": 1, "type": "uint8" },
-        { "name": "pos", "id": 2, "type": "Position" }
-      ]
-    }
-  ]
-}
-```
-
-**Command:**
-
-```bash
-beta_protoc_compiler msg.json -l c
-```
-
-**Output (C):**
-
-The compiler will generate `Position.h`, `Position.c`, `RobotStatus.h` (which includes `Position.h`), and `RobotStatus.c`.
-
-## Using the Generated Code (C Example)
-
-Once you have generated the code from your JSON schema, you can use it to create, serialize, and deserialize messages.
-
-### Generated File Structure
-
-For each message (e.g., `MyMessage`), the following files are created:
-
-*   `MyMessage.h`: The header file defining the data structure and function prototypes.
-*   `MyMessage.c`: The implementation of the serialization and deserialization functions.
-
-### Project Integration
-
-The generated C code has an external dependency that must be included in your project's build system (e.g., `CMakeLists.txt`) to compile correctly.
-
-1.  **`beta_protoc` Common code:**
-    The core serialization helpers are located in the `protoc_common_code/C/` directory of this repository. You must add `beta_protoc.c` and `beta_protoc.h` to your project.
+The compiler generates code that adheres to a simple, efficient, and language-agnostic binary protocol. The following sections describe the structure and encoding rules of this protocol.
 
 ### Binary Message Format
 
-The serializer converts a C struct into a binary message. It's the user's responsibility to handle message framing (e.g., adding start/end bytes) if the communication channel requires it.
+The serializer converts a data structure into a binary message. It's the user's responsibility to handle message framing (e.g., adding start/end bytes) if the communication channel requires it.
 
 All multi-byte integers are encoded in **little-endian** format.
 
@@ -238,22 +151,88 @@ The way data types are serialized into `FIELD_VALUE` depends on their type:
 *   **Other Types:**
     *   `bool`: Encoded as a single byte (`0x00` for `false`, `0x01` for `true`).
     *   `char`: Encoded as a single byte.
-    *   `string`: The raw string bytes are written directly. The `FIELD_LEN` indicates the length.
-    *   **Nested Messages:** The field value is the serialized sub-message itself (including its own header and payload).
+    *   **Nested Messages:** The field value is the serialized sub-message itself (following the same `[PROTOCOL_VERSION, MESSAGE_ID, ...]` structure).
+    *   **Arrays:** The encoding of arrays depends on the type of their elements.
+        *   **Arrays of Nested Messages:** For arrays of complex types (other messages), each element is serialized as a separate `[FIELD_ID, FIELD_LEN, FIELD_VALUE]` block. This allows for lists of different-sized objects.
+        *   **Arrays of Primitive Types (Optimization):** For arrays of primitive types (e.g., `int32`, `float32`), a significant optimization is applied. The entire array is treated as a single field. The `FIELD_ID` is written once, followed by a `FIELD_LEN` that represents the total byte size of *all elements combined*. The `FIELD_VALUE` then consists of the raw, concatenated values of the array elements. This reduces overhead by removing the need for repeated ID and length tags for each element. For example, an array of 10 `uint32` integers will be encoded as one field, not ten.
+
+To create a null-terminated string, you can use an array of `char` (e.g., `char[64]`). The deserializer will automatically add a null terminator `\0` at the end of the data. Furthermore, during serialization, if a `\0` character is found before the end of the array's specified size, the serialization will stop at that point, saving space in the final message.
 
 ### ID and Size Limitations
 
 *   **Message ID:** The `MESSAGE_ID` is a 2-byte integer, allowing for up to **65,536 unique messages**.
-*   **Field ID:** The `FIELD_ID` is encoded as a variable-length integer (varint), allowing for up to **2^64 unique fields** per message.
-*   **Message and Field Size:** The `MESSAGE_LEN` and `FIELD_LEN` are also encoded as varints, allowing for payloads and fields a theoretical **maximum length of 2^64 bytes**.
+*   **Field ID:** The `FIELD_ID` is encoded as a variable-length integer (varint), allowing for up to **2^64 unique fields** (depending on the architecture) per message.
+*   **Message and Field Size:** The `MESSAGE_LEN` and `FIELD_LEN` are also encoded as varints, allowing for payloads and fields a theoretical **maximum length of 2^64 bytes** (depending on the architecture).
 
-### From Binary to Struct
+### Deserialization Process
 
-The deserialization process, handled by the `_from_message` functions, performs the reverse operation:
-1.  It reads the message header (`PROTOCOL_VERSION`, `MESSAGE_ID`, `MESSAGE_LEN`) to validate the message.
+The deserialization process performs the reverse operation of serialization:
+1.  It reads the message header (`PROTOCOL_VERSION`, `MESSAGE_ID`, `MESSAGE_LEN`) to validate and identify the message.
 2.  It iterates through the `PAYLOAD`, reading each field's header (`FIELD_ID`, `FIELD_LEN`).
-3.  It extracts the `FIELD_VALUE` and copies it into the corresponding member of the C struct.
-4.  Multi-byte values are converted from little-endian back to the host's byte order.
+3.  It extracts the `FIELD_VALUE` and populates the corresponding member of the data structure.
+4.  Multi-byte values are converted from little-endian back to the host's native byte order.
+
+## Supported Languages
+
+Currently, the compiler supports:
+
+* **C** (`.c`, `.h`): Generates structs and dependent message headers.
+
+## Language: C
+
+This section describes how to use the C code generated by the compiler.
+
+### Array Handling in C
+
+The way arrays are handled in the generated C code depends on whether they are static or dynamic.
+
+#### Static Arrays
+
+A field defined with a fixed size, like `"type": "uint8[16]"` in JSON, will be generated in the C struct as follows:
+
+```c
+// In your message struct:
+uint8_t my_field[16];
+size_t my_field_count;
+```
+
+*   `my_field[16]`: A standard C array with the specified size.
+*   `my_field_count`: A `size_t` variable indicating how many elements are actually in use. When serializing, the compiler will only write `my_field_count` elements. When deserializing, this field will be populated with the number of elements read from the buffer.
+
+#### Dynamic Arrays
+
+A field defined as a dynamic array, like `"type": "MyMessage[]"`, requires you to manage the memory. The generated C struct will contain:
+
+```c
+// In your message struct:
+MyMessage* my_field;
+size_t my_field_count;
+size_t my_field_max_count;
+```
+
+*   `my_field`: A pointer to a block of memory that you must allocate.
+*   `my_field_count`: The number of elements currently stored in the allocated memory.
+*   `my_field_max_count`: The total capacity of the allocated memory block (i.e., the maximum number of elements it can hold).
+
+Before serializing or deserializing, you are responsible for allocating the memory for the dynamic array and setting `my_field_max_count` to the capacity of your buffer. The compiler will check that `my_field_count` does not exceed `my_field_max_count` to prevent buffer overflows.
+
+### Project Integration
+
+Once you have generated the code from your JSON schema, you can use it to create, serialize, and deserialize messages.
+
+#### Generated File Structure
+
+For each message (e.g., `MyMessage`), the following files are created:
+
+*   `MyMessage.h`: The header file defining the data structure and function prototypes.
+*   `MyMessage.c`: The implementation of the serialization and deserialization functions.
+
+#### Common Code Dependency
+
+The generated C code has an external dependency that must be included in your project's build system (e.g., `CMakeLists.txt`) to compile correctly.
+
+1.  **`beta_protoc` Common code:**
+    The core serialization helpers are located in the `protoc_common_code/C/` directory of this repository. You must add `beta_protoc.c` and `beta_protoc.h` to your project.
 
 ### The Dispatcher (Optional)
 
@@ -357,29 +336,38 @@ int main() {
 }
 ```
 
+## Adding a New Language
 
-## Future Improvements
+The architecture is modular. To add support for a new language (e.g., Python, C++), follow these two steps:
 
-This compiler is under active development. Here are some ideas for future enhancements:
+### 1. Define the Language
 
-### Array Support
+Open `compiler/core/language.py` and add an entry to the `SUPPORTED_LANGUAGES` list. You must provide:
+- The mapping between internal types (`DataType`) and the target language types.
+- The naming convention (`case`) to use for generating names (e.g., function names like `read_<message_name>`).
 
-Handling arrays is a common need in communication protocols. Here’s how it could be implemented:
+```python
+# Example for Python
+from compiler.core.language import Language, Case
+from compiler.common.data_types import DataType
 
-*   **Fixed-size arrays:** For fields that are always of the same length (e.g., a `float32[3]` for a 3D vector).
-    *   **Schema:** Could be defined in JSON as `"type": "float32[3]"`.
-    *   **Generated Code (C):** Would generate a simple array in the struct (e.g., `float x[3];`). Serialization would involve iterating through the array.
+Language(
+    name="Python",
+    case=Case.SNAKE,  # Use snake_case for names (e.g., my_function)
+    src_ext="py",
+    header_ext=None,  # Python does not use header files
+    types_mapping={
+        DataType.UINT8: "",
+        # ... define mappings for all DataType enum members
+    }
+)
+```
 
-*   **Dynamic arrays:** For fields of variable length (e.g., a list of sensor readings).
-    *   **Schema:** Could be defined as `"type": "uint16[]"`.
-    *   **Generated Code (C):** This is more complex. It would require a pointer and a size field in the struct (e.g., `uint16_t* values; size_t num_values;`).
-    *   **Serialization:** The binary format would need to encode the number of elements followed by the elements themselves. This would require careful memory management during deserialization (e.g., using `malloc`).
+### 2. Create Templates
 
-### Other Potential Features
+Create a directory with the **exact name** of the language in `compiler/templates/` (e.g., `compiler/templates/Python/`).
+Add the Jinja2 templates corresponding to the extensions defined in the `Language` object:
 
-*   **Enumerations (Enums):** Add support for defining enums in the JSON schema to create named constants, which improves code readability.
-*   **Field Constraints:** Allow specifying constraints in the JSON schema (e.g., min/max values for numbers, max length for strings) and generate validation code.
-*   **More Languages:** Add support for other popular languages like Python or C++.
-*   **Automated Build System Integration:** Generate `CMake` or `Makefile` snippets to simplify the integration of the generated code into larger projects.
-*   **Oneof / Union Support:** Implement a `oneof` keyword to allow a message to contain one of a set of fields, which is useful for saving memory when only one field is used at a time.
+* `message.py.j2` (if `src_ext="py"`)
 
+The compiler will automatically locate and use these templates during generation.

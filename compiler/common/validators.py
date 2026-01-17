@@ -1,7 +1,8 @@
 import re
 from pydantic_core import PydanticCustomError
 
-NAME_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+NAME_RE_STRING = r'([A-Za-z_][A-Za-z0-9_]*)'
+NAME_RE = re.compile(r'^' + NAME_RE_STRING + r'$')
 def is_valid_name(name: str) -> str:
     if not NAME_RE.match(name):
         raise PydanticCustomError(

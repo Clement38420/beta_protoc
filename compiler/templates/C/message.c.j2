@@ -1,183 +1,367 @@
 #include "{{ message.name }}.h"
 
-int get_{{ lang.camel_to_proper_case(message.name) }}_size(const {{ message.name }} *data, size_t *size) {
-    if (data == NULL || size == NULL) {
+int32_t get_{{ lang.camel_to_proper_case(message.name) }}_size(const {{ message.name }} *data) {
+    if (data == NULL) {
         return BETA_PROTOC_ERR_INVALID_ARGS;
     }
 
-    *size = 0;
-{%- for field in message.fields %}
+    int32_t size = 0;
+    {%- for field in message.fields %}
+    // Field: {{ field.name }}
     {
+        {%- if field.is_array %}
+        {%- if field.is_dynamic %}
+        if (data->{{ field.name }} == NULL) {
+            return BETA_PROTOC_ERR_NULL_ARRAY_POINTER;
+        }
+        {%- endif %}
+        {%- if field.is_primitive %}
         size_t field_size = 0;
-        {% if field.type == "string" %}
-        field_size += safe_strlen(data->{{ field.name }}, {{ field.size }}); // Actual string data
-        {% elif field.is_primitive == false %}
-        size_t nested_size = 0;
-        int get_size_result = get_{{ lang.camel_to_proper_case(field.type) }}_size(&(data->{{ field.name }}), &nested_size); // Nested message size
-        if (get_size_result != 0) return get_size_result;
+        {% endif %}
+        for (size_t i = 0; i < data->{{ field.get_count_var_name() }}; i++) {
+        {% if field.type == "char" %}
+        // Special case for char type to avoid counting after null-terminator
+        if (data->{{ field.name }}[i] == '\0') {
+            break;
+        }
+        {% endif %}
+        {%- endif %}
+        {%- if not field.is_primitive or not field.is_array %}
+        size_t field_size = 0;
+        {% endif %}
+        {% if not field.is_primitive %}
+        // Nested message size calculation
+        int32_t nested_size = get_{{ lang.camel_to_proper_case(field.type) }}_size(&(data->{{ field.name }}{% if field.is_array %}[i]{% endif %}));
+        if (nested_size < 0) {
+            return nested_size;
+        }
         field_size += nested_size;
-        {% else %}
-        field_size += {{ lang.camel_to_proper_case(field.type) }}_size(data->{{ field.name }}); // Actual data
-        {% endif %}
-        field_size += varint_size(field_size); // Length byte
+        {% else -%}
+        // Primitive type size calculation
+        field_size += {{ lang.camel_to_proper_case(field.type) }}_size(data->{{ field.name }}{% if field.is_array %}[i]{% endif %});
+        {%- endif %}
+        {%- if field.is_array and field.is_primitive %}
+        }
+        {%- endif %}
 
-        field_size += varint_size((uint64_t) {{ field.id }}); // Field ID
-
-        if (*size + field_size > SIZE_MAX) return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
-        *size += field_size;
+        // Add size of field length (varint) and field ID (varint)
+        field_size += varint_size(field_size);
+        field_size += varint_size((uint64_t) {{ field.id }});
+        if (size + field_size > SIZE_MAX) {
+            return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
+        }
+        size += field_size;
+        {%- if field.is_array and not field.is_primitive %}
+        }
+        {%- endif %}
     }
-{%- endfor %}
-
-    return 0;
+    {%- endfor %}
+    return size;
 }
 
-int {{ lang.camel_to_proper_case(message.name) }}_to_buff(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
+beta_protoc_err_t {{ lang.camel_to_proper_case(message.name) }}_to_buff(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
     if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
         return BETA_PROTOC_ERR_INVALID_ARGS;
     }
 
-{%- for field in message.fields %}
+    {%- for field in message.fields %}
+    // Field: {{ field.name }}
     {
-        int id_varint_result = varint_to_buff((uint64_t) {{ field.id }}, buff, rem_buff);
-        if (id_varint_result != 0) return id_varint_result;
-
-        {% if field.type == "string" %}
-        size_t str_len = safe_strlen(data->{{ field.name }}, {{ field.size }});
-        int len_varint_result = varint_to_buff(str_len, buff, rem_buff);
-        if (len_varint_result != 0) return len_varint_result;
-
-        int result = {{ lang.camel_to_proper_case(field.type) }}_to_buff(data->{{ field.name }}, str_len, buff, rem_buff);
-        {% elif field.is_primitive == false %}
-        size_t nested_size = 0;
-        int get_size_result = get_{{ lang.camel_to_proper_case(field.type) }}_size(&(data->{{ field.name }}), &nested_size);
-        if (get_size_result != 0) return get_size_result;
-
-        int len_varint_result = varint_to_buff(nested_size, buff, rem_buff);
-        if (len_varint_result != 0) return len_varint_result;
-
-        int result = {{ lang.camel_to_proper_case(field.type) }}_to_buff(&(data->{{ field.name }}), buff, rem_buff);
-        {% else %}
-        int len_varint_result = varint_to_buff({{ lang.camel_to_proper_case(field.type) }}_size(data->{{ field.name }}), buff, rem_buff);
-        if (len_varint_result != 0) return len_varint_result;
-
-        int result = {{ lang.camel_to_proper_case(field.type) }}_to_buff(data->{{ field.name }}, buff, rem_buff);
+        {%- if field.is_array %}
+        {%- if not field.is_dynamic %}
+        if (data->{{ field.get_count_var_name() }} > {{ field.array_size }}) {
+            return BETA_PROTOC_ERR_ARRAY_SIZE_EXCEEDED;
+        }
+        {%- else %}
+        if (data->{{ field.name }} == NULL) {
+            return BETA_PROTOC_ERR_NULL_ARRAY_POINTER;
+        }
+        if (data->{{ field.get_count_var_name() }} > data->{{ field.get_max_count_var_name() }}) {
+            return BETA_PROTOC_ERR_ARRAY_SIZE_EXCEEDED;
+        }
+        {%- endif %}
+        {%- endif %}
+        {%- if field.is_array and not field.is_primitive %}
+        for (size_t i = 0; i < data->{{ field.get_count_var_name() }}; i++) {
         {% endif %}
-        if (result != 0) return result;
-    }
-{%- endfor %}
+        // Serialize field ID
+        beta_protoc_err_t id_varint_err = varint_to_buff((uint64_t) {{ field.id }}, buff, rem_buff);
+        if (id_varint_err != 0) {
+            return id_varint_err;
+        }
+        {% if not field.is_primitive %}
+        // Serialize field length
+        int32_t nested_size = get_{{ lang.camel_to_proper_case(field.type) }}_size(&(data->{{ field.name }}{% if field.is_array %}[i]{% endif %}));
+        if (nested_size < 0) {
+            return nested_size;
+        }
+        beta_protoc_err_t len_varint_err = varint_to_buff(nested_size, buff, rem_buff);
+        if (len_varint_err != 0) {
+            return len_varint_err;
+        }
 
-    return 0;
+        // Serialize value
+        beta_protoc_err_t field_err = {{ lang.camel_to_proper_case(field.type) }}_to_buff(&(data->{{ field.name }}{% if field.is_array %}[i]{% endif %}), buff, rem_buff);
+        {%- else %}
+        {#- If the field is an array of primitives, the TLV is generated one time only -#}
+        {%- if field.is_array and field.is_primitive %}
+        // Serialize field length (sum of all elements size for primitive arrays)
+        size_t array_size = 0;
+        for (size_t i = 0; i < data->{{ field.get_count_var_name() }}; i++) {
+            {% if field.type == "char" %}
+            // Special case for char type to avoid counting after null-terminator
+            if (data->{{ field.name }}[i] == '\0') {
+                break;
+            }
+            {% endif %}
+            array_size += {{ lang.camel_to_proper_case(field.type) }}_size(data->{{ field.name }}[i]);
+        }
+        beta_protoc_err_t len_varint_err = varint_to_buff(array_size, buff, rem_buff);
+        if (len_varint_err != 0) {
+            return len_varint_err;
+        }
+
+        for (size_t i = 0; i < data->{{ field.get_count_var_name() }}; i++) {
+
+        {% if field.type == "char" %}
+        // Special case for char type to avoid writing after null-terminator
+        if (data->{{ field.name }}[i] == '\0') {
+            break;
+        }
+        {% endif %}
+        {% elif not field.is_array %}
+        beta_protoc_err_t len_varint_err = varint_to_buff({{ lang.camel_to_proper_case(field.type) }}_size(data->{{ field.name }}), buff, rem_buff);
+        if (len_varint_err != 0) {
+            return len_varint_err;
+        }
+        {%- endif %}
+
+        // Serialize value
+        beta_protoc_err_t field_err = {{ lang.camel_to_proper_case(field.type) }}_to_buff(data->{{ field.name }}{% if field.is_array %}[i]{% endif %}, buff, rem_buff);
+        {%- endif %}
+        if (field_err != 0) {
+            return field_err;
+        }
+        {%- if field.is_array %}
+        }
+        {%- endif %}
+    }
+    {%- endfor %}
+    return BETA_PROTOC_SUCCESS;
 }
 
-int {{ lang.camel_to_proper_case(message.name) }}_to_message(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
+beta_protoc_err_t {{ lang.camel_to_proper_case(message.name) }}_to_message(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
     if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
         return BETA_PROTOC_ERR_INVALID_ARGS;
     }
 
-    if (*rem_buff < 1) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
-    **buff = (uint8_t) PROTOC_VERSION; // Protoc version
+    // Write protocol version
+    if (*rem_buff < 1) {
+        return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
+    }
+    **buff = (uint8_t) PROTOC_VERSION;
     (*buff)++;
     (*rem_buff)--;
 
-    if (*rem_buff < 2) return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
-    **buff = (uint16_t) {{ message.id }}; // Message ID LSB
+    // Write message ID
+    if (*rem_buff < 2) {
+        return BETA_PROTOC_ERR_BUFFER_TOO_SMALL;
+    }
+    **buff = (uint16_t) {{ message.id }};
     (*buff)++;
-    **buff = (((uint16_t) {{ message.id }} >> 8) & 0x00FF); // Message ID MSB
+    **buff = (((uint16_t) {{ message.id }} >> 8) & 0x00FF);
     (*buff)++;
     *rem_buff -= 2;
 
-    size_t payload_size = 0;
-    int get_size_result = get_{{ lang.camel_to_proper_case(message.name) }}_size(data, &payload_size);
-    if (get_size_result != 0) return get_size_result;
-    int varint_result = varint_to_buff(payload_size, buff, rem_buff);
-    if (varint_result != 0) return varint_result;
+    // Write payload size
+    int32_t payload_size = get_{{ lang.camel_to_proper_case(message.name) }}_size(data);
+    if (payload_size < 0) {
+        return payload_size;
+    }
+    beta_protoc_err_t len_varint_err = varint_to_buff(payload_size, buff, rem_buff);
+    if (len_varint_err != 0) {
+        return len_varint_err;
+    }
 
-    int result = {{ lang.camel_to_proper_case(message.name) }}_to_buff(data, buff, rem_buff);
-    if (result != 0) return result;
+    // Write payload
+    beta_protoc_err_t msg_err = {{ lang.camel_to_proper_case(message.name) }}_to_buff(data, buff, rem_buff);
+    if (msg_err != 0) {
+        return msg_err;
+    }
 
-    return 0;
+    return BETA_PROTOC_SUCCESS;
 }
 
-int {{ lang.camel_to_proper_case(message.name) }}_from_buff({{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
+beta_protoc_err_t {{ lang.camel_to_proper_case(message.name) }}_from_buff({{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
     if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
         return BETA_PROTOC_ERR_INVALID_ARGS;
     }
 
-    while (*rem_buff > 0) {
-        uint64_t field_id;
-        int id_varint_result = varint_from_buff(&field_id, buff, rem_buff);
-        if (id_varint_result != 0) return id_varint_result;
+    // Initialize array counts
+    {%- for field in message.fields %}
+    {%- if field.is_array %}
+    {%- if field.is_dynamic %}
+    if (data->{{ field.name }} == NULL) {
+        return BETA_PROTOC_ERR_NULL_ARRAY_POINTER;
+    }
+    {%- endif %}
+    data->{{ field.get_count_var_name() }} = 0;
+    {%- endif %}
+    {%- endfor %}
 
+    while (*rem_buff > 0) {
+        // Deserialize field ID
+        uint64_t field_id;
+        beta_protoc_err_t id_varint_err = varint_from_buff(&field_id, buff, rem_buff);
+        if (id_varint_err != 0) {
+            return id_varint_err;
+        }
+
+        // Deserialize field length
         size_t field_len;
         {
-            uint64_t temp;
-            int varint_result = varint_from_buff(&temp, buff, rem_buff);
-            if (varint_result != 0) return varint_result;
-            if (temp > SIZE_MAX) return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
-            field_len = (size_t) temp;
+            uint64_t tmp;
+            beta_protoc_err_t len_varint_err = varint_from_buff(&tmp, buff, rem_buff);
+            if (len_varint_err != 0) {
+                return len_varint_err;
+            }
+            if (tmp > SIZE_MAX) {
+                return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
+            }
+            field_len = (size_t) tmp;
         }
 
         switch (field_id) {
-        {%- for field in message.fields %}
-            case {{ field.id }}:
-            {
-                {% if field.type == "string" %}
-                if (field_len >= {{ field.size }}) return BETA_PROTOC_ERR_INVALID_DATA;
-                int result = {{ lang.camel_to_proper_case(field.type) }}_from_buff(data->{{ field.name }}, field_len, buff, rem_buff);
-                data->{{ field.name }}[field_len] = '\0';
-                {% elif field.is_primitive == false %}
+            {%- for field in message.fields %}
+            // Field: {{ field.name }}
+            case {{ field.id }}: {
+                uint8_t *field_start_buff = *buff;
+
+                // Deserialize field value
+                {%- if not field.is_primitive %}
                 size_t rem_nested = field_len;
-                int result = {{ lang.camel_to_proper_case(field.type) }}_from_buff(&(data->{{ field.name }}), buff, &rem_nested);
+                beta_protoc_err_t field_err = {{ lang.camel_to_proper_case(field.type) }}_from_buff(&(data->{{ field.name }}{% if field.is_array %}[data->{{ field.get_count_var_name() }}]{% endif %}), buff, &rem_nested);
                 *rem_buff -= field_len;
-                {% else %}
-                int result = {{ lang.camel_to_proper_case(field.type) }}_from_buff(&(data->{{ field.name }}), buff, rem_buff);
-                {% endif %}
-                if (result != 0) return result;
+                {%- if field.is_array %}
+                data->{{ field.get_count_var_name() }}++;
+                {%- if not field.is_dynamic %}
+                if (data->{{ field.get_count_var_name() }} > {{ field.array_size }}) {
+                    return BETA_PROTOC_ERR_ARRAY_SIZE_EXCEEDED;
+                }
+                {%- else %}
+                if (data->{{ field.get_count_var_name() }} > data->{{ field.get_max_count_var_name() }}) {
+                    return BETA_PROTOC_ERR_ARRAY_SIZE_EXCEEDED;
+                }
+                {%- endif %}
+                {%- endif %}
+                if (field_err != 0) {
+                    return field_err;
+                }
+                {%- else %}
+                {% if field.is_array and field.is_primitive %}
+                while (*buff - field_start_buff < field_len) {
+                    beta_protoc_err_t field_err = {{ lang.camel_to_proper_case(field.type) }}_from_buff(&(data->{{ field.name }}[data->{{ field.get_count_var_name() }}]), buff, rem_buff);
+                    if (field_err != 0) {
+                        return field_err;
+                    }
+                    data->{{ field.get_count_var_name() }}++;
+                    {%- if not field.is_dynamic %}
+                    if (data->{{ field.get_count_var_name() }} > {{ field.array_size }}) {
+                        return BETA_PROTOC_ERR_ARRAY_SIZE_EXCEEDED;
+                    }
+                    {%- else %}
+                    if (data->{{ field.get_count_var_name() }} > data->{{ field.get_max_count_var_name() }}) {
+                        return BETA_PROTOC_ERR_ARRAY_SIZE_EXCEEDED;
+                    }
+                    {%- endif %}
+                }
+                {%- elif not field.is_array %}
+                beta_protoc_err_t field_err = {{ lang.camel_to_proper_case(field.type) }}_from_buff(&(data->{{ field.name }}{% if field.is_array %}[data->{{ field.get_count_var_name() }}]{% endif %}), buff, rem_buff);
+                if (field_err != 0) {
+                    return field_err;
+                }
+                {%- endif %}
+                {%- endif %}
+
+                // Check if the correct number of bytes were read
+                if ((size_t)(*buff - field_start_buff) != field_len) {
+                    return BETA_PROTOC_ERR_INVALID_DATA;
+                }
+
                 break;
             }
-        {%- endfor %}
-
+            {%- endfor %}
             default:
-                if (field_len > *rem_buff) return BETA_PROTOC_ERR_INVALID_DATA;
+                // Skip unknown fields
+                if (field_len > *rem_buff) {
+                    return BETA_PROTOC_ERR_INVALID_DATA;
+                }
                 (*buff) += field_len;
                 *rem_buff -= field_len;
         }
     }
 
-    return 0;
+    // Null-terminate strings
+    {%- for field in message.fields %}
+    {%- if field.is_array and field.type == "char" %}
+    data->{{ field.name }}[data->{{ field.get_count_var_name() }}] = '\0';
+    {%- endif %}
+    {%- endfor %}
+
+    return BETA_PROTOC_SUCCESS;
 }
 
-int {{ lang.camel_to_proper_case(message.name) }}_from_message({{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
+beta_protoc_err_t {{ lang.camel_to_proper_case(message.name) }}_from_message({{ message.name }} *data, uint8_t **buff, size_t *rem_buff) {
     if (buff == NULL || *buff == NULL || rem_buff == NULL || data == NULL) {
         return BETA_PROTOC_ERR_INVALID_ARGS;
     }
 
-    if (*rem_buff < 1) return BETA_PROTOC_ERR_INVALID_DATA;
-    if (**buff != PROTOC_VERSION) return BETA_PROTOC_ERR_INVALID_PROTOC_VERSION;
+    // Read and check protocol version
+    if (*rem_buff < 1) {
+        return BETA_PROTOC_ERR_INVALID_DATA;
+    }
+    if (**buff != PROTOC_VERSION) {
+        return BETA_PROTOC_ERR_INVALID_PROTOC_VERSION;
+    }
     (*buff)++;
     (*rem_buff)--;
 
-    if (*rem_buff < 2) return BETA_PROTOC_ERR_INVALID_DATA;
-    if ((((uint16_t)(*(*buff + 1)) << 8) | (uint16_t)(**buff)) != {{ message.id }}) return BETA_PROTOC_ERR_INVALID_ID;
+    // Read and check message ID
+    if (*rem_buff < 2) {
+        return BETA_PROTOC_ERR_INVALID_DATA;
+    }
+    if ((((uint16_t)(*(*buff + 1)) << 8) | (uint16_t)(**buff)) != {{ message.id }}) {
+        return BETA_PROTOC_ERR_INVALID_ID;
+    }
     *buff += 2;
     *rem_buff -= 2;
 
+    // Read payload length
     size_t payload_len;
     {
-        uint64_t temp;
-        int varint_result = varint_from_buff(&temp, buff, rem_buff);
-        if (varint_result != 0) return varint_result;
-        if (temp > SIZE_MAX) return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
-        payload_len = (size_t) temp;
+        uint64_t tmp;
+        beta_protoc_err_t len_varint_err = varint_from_buff(&tmp, buff, rem_buff);
+        if (len_varint_err != 0) {
+            return len_varint_err;
+        }
+        if (tmp > SIZE_MAX) {
+            return BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT;
+        }
+        payload_len = (size_t) tmp;
     }
 
-    if (*rem_buff < payload_len) return BETA_PROTOC_ERR_INVALID_DATA;
+    if (*rem_buff < payload_len) {
+        return BETA_PROTOC_ERR_INVALID_DATA;
+    }
     size_t rem_payload = payload_len;
 
-    int result = {{ lang.camel_to_proper_case(message.name) }}_from_buff(data, buff, &rem_payload);
-    if (result != 0) return result;
+    // Read payload
+    beta_protoc_err_t msg_err = {{ lang.camel_to_proper_case(message.name) }}_from_buff(data, buff, &rem_payload);
+    if (msg_err != 0) {
+        return msg_err;
+    }
 
     *rem_buff -= payload_len;
 
-    return 0;
+    return BETA_PROTOC_SUCCESS;
 }

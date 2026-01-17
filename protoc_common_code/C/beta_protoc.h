@@ -12,13 +12,15 @@ extern "C" {
 #define PROTOC_VERSION 1
 
 typedef enum {
-    BETA_PROTOC_SUCCESS = 0, // Operation successful
-    BETA_PROTOC_ERR_INVALID_ARGS = -1, // NULL pointers passed as parameters
+    BETA_PROTOC_SUCCESS = 0,
+    BETA_PROTOC_ERR_INVALID_ARGS = -1,              // NULL pointers passed as parameters
     BETA_PROTOC_ERR_BUFFER_TOO_SMALL = -2, // Output or work buffer too small
     BETA_PROTOC_ERR_INVALID_ID = -3, // Message ID does not match the struct
     BETA_PROTOC_ERR_INVALID_PROTOC_VERSION = -4, // Protoc version does not match
     BETA_PROTOC_VALUE_EXCEEDS_ARCH_LIMIT = -5, // Value exceeds architecture limits (e.g., varint too large for 32 bits size_t)
     BETA_PROTOC_ERR_INVALID_DATA = -6, // General data error
+    BETA_PROTOC_ERR_ARRAY_SIZE_EXCEEDED = -7, // Array size exceeded for fixed-size arrays
+    BETA_PROTOC_ERR_NULL_ARRAY_POINTER = -8 // NULL pointer passed for an array field
 } beta_protoc_err_t;
 
 uint32_t zigzag_encode_32(int32_t value);

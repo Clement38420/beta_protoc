@@ -18,7 +18,6 @@ class DataType(str, Enum):
     FLOAT32 = "float32"
     FLOAT64 = "float64"
 
-    # Text and logic
+    # Other
     CHAR = "char"
-    STRING = "string"
     BOOL = "bool"

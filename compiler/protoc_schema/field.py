@@ -1,9 +1,8 @@
 from pydantic import BaseModel, Field as PydanticField, AfterValidator, model_validator
-from pydantic_core import PydanticCustomError
-
 from compiler.common.data_types import DataType
 from compiler.common.validators import is_valid_name
 from typing import Annotated, Optional
+from compiler.common.validators import NAME_RE_STRING
 import re
 
 class Field(BaseModel):
@@ -19,8 +18,11 @@ class Field(BaseModel):
     name: Annotated[str, AfterValidator(is_valid_name)] = PydanticField(min_length=1)
     id: int = PydanticField(gt=-1)
     type: str = PydanticField(min_length=1)
-    size: Optional[int] = None
     is_primitive: bool = True
+
+    is_array: Optional[bool] = False
+    is_dynamic: Optional[bool] = False
+    array_size: Optional[int] = None
 
 
     @model_validator(mode='after')
@@ -29,20 +31,13 @@ class Field(BaseModel):
 
         If the field is a correct 'DataType' enum, the field type is converted, else it is left unchanged, and it represents a custom message type.
         It also handles special cases like "string[SIZE]".
-
-        Raises:
-            PydanticCustomError: If the type is "string" without a specified size.
         """
-        # Handle "string[SIZE]" format
-        string_match = re.match(r"string\[(\d+)]$", self.type)
-        if string_match:
-            self.size = int(string_match.group(1))
-            self.type = "string"
-        elif self.type == "string":
-            raise PydanticCustomError(
-                "invalid_string_type",
-                "Type 'string' must have a specified size, e.g., 'string[255]'.",
-            )
+        array_match = re.match(NAME_RE_STRING + r"\[(\d*)\]$", self.type)
+        if array_match:
+            self.is_array = True
+            self.type = array_match.group(1)
+            self.is_dynamic = array_match.group(2) == ""
+            self.array_size = None if self.is_dynamic else int(array_match.group(2))
 
         try:
             self.type = DataType(self.type).value
@@ -50,3 +45,11 @@ class Field(BaseModel):
             self.is_primitive = False
 
         return self
+
+    def get_count_var_name(self):
+        """Generates a variable name for the count of elements in an array field."""
+        return f"{self.name}_count"
+
+    def get_max_count_var_name(self):
+        """Generates a variable name for the maximum count of elements in an array field."""
+        return f"{self.name}_max_count"

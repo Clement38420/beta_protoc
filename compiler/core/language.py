@@ -67,7 +67,6 @@ SUPPORTED_LANGUAGES = [
             DataType.FLOAT32: "float",
             DataType.FLOAT64: "double",
             DataType.CHAR: "char",
-            DataType.STRING: "char",
             DataType.BOOL: "bool",
         }
     )

@@ -8,6 +8,7 @@
 
 #include "beta_protoc.h"
 
+// Include dependencies for nested messages
 {%- for dep in message.dependencies %}
 #include "{{ dep }}.h"
 {%- endfor %}
@@ -16,58 +17,79 @@
 extern "C" {
 #endif
 
+// Message-specific struct definition
 typedef struct {
-{%- for field in message.fields %}
-    {{ lang.convert_type(field.type) }} {{ field.name }}{% if field.type == "string" %}[{{ field.size }}]{% endif %};
-{%- endfor %}
+    {%- for field in message.fields %}
+    // Field: {{ field.name }} (ID: {{ field.id }})
+    {{ lang.convert_type(field.type) }} {{ field.name }}{% if field.is_array and not field.is_dynamic %}[{{ field.array_size }}]{% endif %};
+    {%- if field.is_array %}
+    size_t {{ field.get_count_var_name() }}; // Number of elements in the array
+    {%- endif %}
+    {%- if field.is_array and field.is_dynamic %}
+    size_t {{ field.get_max_count_var_name() }}; // Maximum number of elements the array can hold
+    {%- endif %}
+    {%- endfor %}
 } {{ message.name }};
 
 /**
  * @brief Calculates the serialized size of the {{ message.name }} message payload.
+ *
  * @param data Pointer to the struct to measure.
- * @param size Pointer to a size_t variable to store the calculated size.
- * @return 0 on success, error code otherwise.
+ * @return The size in bytes on success, error code < 0 otherwise.
  */
-int get_{{ lang.camel_to_proper_case(message.name) }}_size(const {{ message.name }} *data, size_t *size);
+int32_t get_{{ lang.camel_to_proper_case(message.name) }}_size(const {{ message.name }} *data);
 
 /**
  * @brief Serializes the {{ message.name }} message payload into a buffer.
+ *
  * @param data Pointer to the struct to serialize.
- * @param buff Double pointer to the buffer where the payload will be written. The pointer is advanced by the number of bytes written.
- * @param rem_buff Pointer to the remaining buffer size. The value is decremented by the number of bytes written.
+ * @param buff Double pointer to the buffer where the payload will be written.
+ *             The pointer is advanced by the number of bytes written.
+ * @param rem_buff Pointer to the remaining buffer size.
+ *                 The value is decremented by the number of bytes written.
  * @return 0 on success, error code otherwise.
  */
-int {{ lang.camel_to_proper_case(message.name) }}_to_buff(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
+beta_protoc_err_t {{ lang.camel_to_proper_case(message.name) }}_to_buff(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
 
 /**
  * @brief Serializes the {{ message.name }} message into a complete binary message (header + payload).
+ *
  * @param data Pointer to the struct to serialize.
- * @param buff Double pointer to the buffer where the message will be written. The pointer is advanced by the number of bytes written.
- * @param rem_buff Pointer to the remaining buffer size. The value is decremented by the number of bytes written.
+ * @param buff Double pointer to the buffer where the message will be written.
+ *             The pointer is advanced by the number of bytes written.
+ * @param rem_buff Pointer to the remaining buffer size.
+ *                 The value is decremented by the number of bytes written.
  * @return 0 on success, error code otherwise.
  */
-int {{ lang.camel_to_proper_case(message.name) }}_to_message(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
+beta_protoc_err_t {{ lang.camel_to_proper_case(message.name) }}_to_message(const {{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
 
 /**
  * @brief Deserializes the payload of a {{ message.name }} message from a buffer into a struct.
+ *
  * @param data Pointer to the struct to populate.
- * @param buff Double pointer to the buffer from which to read the payload. The pointer is advanced by the number of bytes read.
- * @param rem_buff Pointer to the remaining buffer size. The value is decremented by the number of bytes read.
+ * @param buff Double pointer to the buffer from which to read the payload.
+ *             The pointer is advanced by the number of bytes read.
+ * @param rem_buff Pointer to the remaining buffer size.
+ *                 The value is decremented by the number of bytes read.
  * @return 0 on success, error code otherwise.
  */
-int {{ lang.camel_to_proper_case(message.name) }}_from_buff({{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
+beta_protoc_err_t {{ lang.camel_to_proper_case(message.name) }}_from_buff({{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
 
 /**
  * @brief Deserializes a complete binary message (header + payload) into a {{ message.name }} struct.
+ *
  * @param data Pointer to the struct to populate.
- * @param buff Double pointer to the buffer from which to read the message. The pointer is advanced by the number of bytes read.
- * @param rem_buff Pointer to the remaining buffer size. The value is decremented by the number of bytes read.
+ * @param buff Double pointer to the buffer from which to read the message.
+ *             The pointer is advanced by the number of bytes read.
+ * @param rem_buff Pointer to the remaining buffer size.
+ *                 The value is decremented by the number of bytes read.
  * @return 0 on success, error code otherwise.
  */
-int {{ lang.camel_to_proper_case(message.name) }}_from_message({{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
+beta_protoc_err_t {{ lang.camel_to_proper_case(message.name) }}_from_message({{ message.name }} *data, uint8_t **buff, size_t *rem_buff);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif // {{ message.name|upper }}_MSG_H
+
