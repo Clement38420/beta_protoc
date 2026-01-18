@@ -1,6 +1,6 @@
 #include "dispatcher.h"
 
-int protoc_dispatch(uint8_t **buff, size_t *rem_buff) {
+int protoc_dispatch(uint8_t **buff, size_t *rem_buff, void *ctx) {
     uint8_t *p_buff = *buff;
 
     // Check for minimum buffer size (version + message ID)
@@ -24,7 +24,7 @@ int protoc_dispatch(uint8_t **buff, size_t *rem_buff) {
 
             // Call the user-implemented callback for the received message
             if (on_{{ lang.camel_to_proper_case(message.name) }}_received != NULL) {
-                on_{{ lang.camel_to_proper_case(message.name) }}_received(&msg);
+                on_{{ lang.camel_to_proper_case(message.name) }}_received(&msg, ctx);
             }
             return DISPATCHER_SUCCESS;
         }

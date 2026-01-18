@@ -30,8 +30,9 @@ typedef enum {
  * successfully received and deserialized.
  *
  * @param msg Pointer to the deserialized {{ message.name }} message struct.
+ * @param ctx Pointer to user-defined context (if needed).
  */
-void on_{{ lang.camel_to_proper_case(message.name) }}_received({{ message.name }} *msg) __attribute__((weak));
+void on_{{ lang.camel_to_proper_case(message.name) }}_received({{ message.name }} *msg, void *ctx) __attribute__((weak));
 {%- endfor %}
 
 /**
@@ -44,9 +45,10 @@ void on_{{ lang.camel_to_proper_case(message.name) }}_received({{ message.name }
  *             The pointer is advanced past the processed message.
  * @param rem_buff Pointer to the remaining buffer size.
  *                 The value is decremented by the size of the processed message.
+ * @param ctx Pointer to user-defined context, which will be transmitted to callbacks (if needed).
  * @return DISPATCHER_SUCCESS on success, or an error code on failure.
  */
-int protoc_dispatch(uint8_t **buff, size_t *rem_buff);
+int protoc_dispatch(uint8_t **buff, size_t *rem_buff, void *ctx);
 
 #ifdef __cplusplus
 }

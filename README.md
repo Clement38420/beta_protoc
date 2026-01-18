@@ -236,15 +236,15 @@ The generated C code has an external dependency that must be included in your pr
 
 ### The Dispatcher (Optional)
 
-To simplify message handling, the compiler also generates a `dispatcher`. It is a set of files (`dispatcher.c` and `dispatcher.h`) that can automatically read an incoming byte stream, identify a message, deserialize it, and call a user-defined callback function.
+To simplify message handling, the compiler also generates a `dispatcher`. It is a set of files (`dispatcher.c` and `dispatcher.h`) that can automatically read an incoming byte stream, identify a message, deserialize it, and call a user-defined callback function, while also passing a user-defined context.
 
 **Features:**
 
 *   **Automatic Message Identification:** Reads the message header and determines the message type.
-*   **Callback System:** For each message `MyMessage`, it calls a weak function `on_MyMessage_received(MyMessage *msg)` that you can implement in your application.
+*   **Callback System with Context:** For each message `MyMessage`, it calls a weak function `on_MyMessage_received(MyMessage *msg, void *ctx)` that you can implement in your application. The `ctx` parameter allows you to pass a custom context (e.g., a pointer to an object or state) to your callbacks.
 *   **Stream-Safe:** The dispatcher can be fed bytes one by one or in chunks, and it will find messages in the stream.
 
-To use it, include `dispatcher.h` in your project and implement the `on_<MessageName>_received` functions for the messages you want to handle. Then, feed your incoming data stream to the `protoc_dispatch` function.
+To use it, include `dispatcher.h` in your project and implement the `on_<MessageName>_received` functions for the messages you want to handle. Then, feed your incoming data stream and your context to the `protoc_dispatch` function.
 
 ### Generated Functions
 
@@ -311,14 +311,25 @@ Here is an example demonstrating serialization and deserialization using the dis
 #include "dispatcher.h"
 #include <stdio.h>
 
+// --- User-defined context structure ---
+typedef struct {
+    int messages_processed;
+} AppContext;
+
 // --- User-defined callback ---
 // This function is called by the dispatcher when a Position message is received.
-void on_position_received(Position *msg) {
-    printf("Callback triggered!\n");
+void on_position_received(Position *msg, void *ctx) {
+    AppContext *app_ctx = (AppContext *)ctx;
+    app_ctx->messages_processed++;
+
+    printf("Callback triggered! (Message count: %d)\n", app_ctx->messages_processed);
     printf("Received Position: x=%.2f, y=%.2f\n", msg->x, msg->y);
 }
 
 int main() {
+    // --- Initialization ---
+    AppContext my_context = {0};
+
     // --- Serialization ---
 
     // 1. Populate the message struct
@@ -343,12 +354,12 @@ int main() {
 
         // --- Deserialization with Dispatcher ---
 
-        // 4. Feed the buffer to the dispatcher
+        // 4. Feed the buffer and context to the dispatcher
         uint8_t *p_read_buffer = output_buffer;
         size_t read_buffer_len = message_size;
         
         while(read_buffer_len > 0) {
-            int dispatch_result = protoc_dispatch(&p_read_buffer, &read_buffer_len);
+            int dispatch_result = protoc_dispatch(&p_read_buffer, &read_buffer_len, &my_context);
             if (dispatch_result == DISPATCHER_SUCCESS) {
                 printf("Dispatcher found and processed a message.\n");
             }
