@@ -30,28 +30,40 @@ class Generator:
         for lang in self.languages:
             src_template = self.env.get_template(f"{lang.name}/message.{lang.src_ext}.j2")
 
+            lang_path = out_dir / lang.name / "beta_protoc_generated"
+            lang_path.mkdir(parents=True, exist_ok=True)
+
+            src_path = lang_path / "src"
+            src_path.mkdir(parents=True, exist_ok=True)
+
             header_template = None
             gen_header = True if lang.header_ext else False
+            header_path = lang_path / "include"
             if gen_header:
                 header_template = self.env.get_template(f"{lang.name}/message.{lang.header_ext}.j2")
-
-            (out_dir / lang.name).mkdir(parents=True, exist_ok=True)
+                header_path.mkdir(parents=True, exist_ok=True)
 
             dispatcher_content = self.env.get_template(f"{lang.name}/dispatcher.{lang.src_ext}.j2").render(messages=messages, lang=lang)
-            with open(out_dir / lang.name / ("dispatcher." + lang.src_ext), "w") as f:
+            with open(src_path / ("dispatcher." + lang.src_ext), "w") as f:
                 f.write(dispatcher_content)
 
             if gen_header:
                 dispatcher_header_content = self.env.get_template(f"{lang.name}/dispatcher.{lang.header_ext}.j2").render(messages=messages, lang=lang)
-                with open(out_dir / lang.name / ("dispatcher." + lang.header_ext), "w") as f:
+                with open(header_path / ("dispatcher." + lang.header_ext), "w") as f:
                     f.write(dispatcher_header_content)
 
             for message in messages:
                 src_content = src_template.render(message=message, lang=lang)
-                with open(out_dir / lang.name / (message.name + "." + lang.src_ext), "w") as f:
+                with open(src_path / (message.name + "." + lang.src_ext), "w") as f:
                     f.write(src_content)
 
                 if gen_header:
                     header_content = header_template.render(message=message, lang=lang)
-                    with open(out_dir / lang.name / (message.name + "." + lang.header_ext), "w") as f:
+                    with open(header_path / (message.name + "." + lang.header_ext), "w") as f:
                         f.write(header_content)
+
+            for build_filename in lang.build_filenames:
+                build_template = self.env.get_template(f"{lang.name}/{build_filename}.j2")
+                build_content = build_template.render(messages=messages, lang=lang)
+                with open(lang_path / build_filename, "w") as f:
+                    f.write(build_content)

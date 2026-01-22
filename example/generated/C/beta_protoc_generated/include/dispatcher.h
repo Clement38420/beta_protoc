@@ -28,8 +28,9 @@ typedef enum {
  * successfully received and deserialized.
  *
  * @param msg Pointer to the deserialized SensorData message struct.
+ * @param ctx Pointer to user-defined context (if needed).
  */
-void on_sensor_data_received(SensorData *msg) __attribute__((weak));
+void on_sensor_data_received(SensorData *msg, void *ctx) __attribute__((weak));
 /**
  * @brief Weak callback function to be implemented by the user.
  *
@@ -37,8 +38,9 @@ void on_sensor_data_received(SensorData *msg) __attribute__((weak));
  * successfully received and deserialized.
  *
  * @param msg Pointer to the deserialized Value message struct.
+ * @param ctx Pointer to user-defined context (if needed).
  */
-void on_value_received(Value *msg) __attribute__((weak));
+void on_value_received(Value *msg, void *ctx) __attribute__((weak));
 
 /**
  * @brief Dispatches an incoming binary message.
@@ -50,9 +52,10 @@ void on_value_received(Value *msg) __attribute__((weak));
  *             The pointer is advanced past the processed message.
  * @param rem_buff Pointer to the remaining buffer size.
  *                 The value is decremented by the size of the processed message.
+ * @param ctx Pointer to user-defined context, which will be transmitted to callbacks (if needed).
  * @return DISPATCHER_SUCCESS on success, or an error code on failure.
  */
-int protoc_dispatch(uint8_t **buff, size_t *rem_buff);
+int protoc_dispatch(uint8_t **buff, size_t *rem_buff, void *ctx);
 
 #ifdef __cplusplus
 }

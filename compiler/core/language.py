@@ -30,6 +30,7 @@ class Language(BaseModel):
     src_ext: Annotated[str, AfterValidator(is_valid_extension)] = PydanticField(min_length=1)
     header_ext: Annotated[str, AfterValidator(is_valid_extension)] | None = None
     types_mapping: Dict[DataType, str] = PydanticField(default_factory=dict)
+    build_filenames: List[str] = PydanticField(default_factory=list)
 
     def convert_type(self, type_: str) -> str:
         try:
@@ -68,6 +69,7 @@ SUPPORTED_LANGUAGES = [
             DataType.FLOAT64: "double",
             DataType.CHAR: "char",
             DataType.BOOL: "bool",
-        }
+        },
+        build_filenames=["CMakeLists.txt"]
     )
 ]

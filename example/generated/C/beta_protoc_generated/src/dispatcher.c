@@ -1,6 +1,6 @@
 #include "dispatcher.h"
 
-int protoc_dispatch(uint8_t **buff, size_t *rem_buff) {
+int protoc_dispatch(uint8_t **buff, size_t *rem_buff, void *ctx) {
     uint8_t *p_buff = *buff;
 
     // Check for minimum buffer size (version + message ID)
@@ -23,7 +23,7 @@ int protoc_dispatch(uint8_t **buff, size_t *rem_buff) {
 
             // Call the user-implemented callback for the received message
             if (on_sensor_data_received != NULL) {
-                on_sensor_data_received(&msg);
+                on_sensor_data_received(&msg, ctx);
             }
             return DISPATCHER_SUCCESS;
         }
@@ -36,7 +36,7 @@ int protoc_dispatch(uint8_t **buff, size_t *rem_buff) {
 
             // Call the user-implemented callback for the received message
             if (on_value_received != NULL) {
-                on_value_received(&msg);
+                on_value_received(&msg, ctx);
             }
             return DISPATCHER_SUCCESS;
         }
